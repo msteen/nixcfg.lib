@@ -148,34 +148,39 @@ in
       };
     };
 
-    # testUpdateWithDefaults = {
-    #   expr =
-    #     defaultUpdateExtend {
-    #       inputs = { };
-    #       channelName = "nixpkgs";
-    #       system = "x86_64-linux";
-    #       moduleArgs = { };
-    #       stateVersion = "22.11";
-    #       users = _: {
-    #         modules = [ ];
-    #       };
-    #     } {
-    #       inherit (bar) inputs;
-    #       channelName = "nixos-22_11";
-    #     } (final: prev: name: {
-    #       users = username: {
-    #         modules = prev.modules ++ [ testListAttrs.expected.homeConfigurations."${name}_${username}" ];
-    #       };
-    #     });
-    #   expected = {
-    #     inherit (bar) inputs;
-    #     channelName = "nixos-22_11";
-    #     system = "x86_64-linux";
-    #     moduleArgs = { };
-    #     stateVersion = "22.11";
-    #     users.matthijs.modules = [ testListAttrs.expected.homeConfigurations.ubuntu_matthijs ];
-    #   };
-    # };
+    testUpdateWithDefaults = {
+      expr =
+        defaultUpdateExtend (_: {
+          inputs = { };
+          channelName = "nixpkgs";
+          system = "x86_64-linux";
+          moduleArgs = { };
+          stateVersion = "22.11";
+          users = _: {
+            modules = [ ];
+          };
+        }) {
+          ubuntu = {
+            inherit (bar) inputs;
+            channelName = "nixos-22_11";
+            users.matthijs = { };
+          };
+        } (final: prev: name: {
+          users = username: {
+            modules = prev.${name}.users.${username}.modules ++ [ testListAttrs.expected.homeConfigurations."${name}_${username}" ];
+          };
+        });
+      expected = {
+        ubuntu = {
+          inherit (bar) inputs;
+          channelName = "nixos-22_11";
+          system = "x86_64-linux";
+          moduleArgs = { };
+          stateVersion = "22.11";
+          users.matthijs.modules = [ testListAttrs.expected.homeConfigurations.ubuntu_matthijs ];
+        };
+      };
+    };
 
     testFooName = {
       expr = foo.name;

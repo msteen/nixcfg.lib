@@ -20,6 +20,7 @@
     ;
   inherit
     (nixpkgs.lib)
+    const
     extends
     fix
     flip
@@ -30,6 +31,10 @@
     singleton
     ;
 in rec {
+  traceJson = x: builtins.trace (builtins.toJSON x) x;
+  traceJsonMap = f: x: builtins.trace (builtins.toJSON (f x)) x;
+  traceJsonValue = value: traceJsonMap (const value);
+
   concatAttrs = foldl' (a: b: a // b) { };
   concatAttrsRecursive = foldl' (a: b: recursiveUpdate a b) { };
 
