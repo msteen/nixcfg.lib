@@ -33,29 +33,26 @@ in rec {
   concatAttrs = foldl' (a: b: a // b) { };
   concatAttrsRecursive = foldl' (a: b: recursiveUpdate a b) { };
 
-  callableUpdate = let
-    recur = callable: rhs:
-      zipAttrsWith (_: values: let
-        callable = elemAt values 1;
-        value = head values;
-      in
-        if length values == 1
-        then
-          if isFunction value
-          then { }
-          else value
-        else if !(isAttrs value)
-        then value
-        else recur callable value)
-      (let
-        lhs =
-          if isFunction callable
-          then
-            if isAttrs rhs
-            then mapAttrs (name: _: callable name) rhs
-            else { }
-          else callable;
-      in [ rhs lhs ]);
+  applyAttrs = let
+    recurDefault = lhs:
+      if isAttrs lhs
+      then mapAttrs (_: recurDefault) lhs
+      else if isFunction lhs
+      then { }
+      else lhs;
+    recur = lhs: rhs:
+      if !(isAttrs rhs)
+      then recurDefault lhs
+      else if isFunction lhs
+      then mapAttrs (name: recur (lhs name)) rhs
+      else if isAttrs lhs
+      then
+        mapAttrs (name: lhs:
+          if rhs ? ${name}
+          then recur lhs rhs.${name}
+          else recurDefault lhs)
+        lhs
+      else lhs;
   in
     recur;
 
@@ -79,8 +76,8 @@ in rec {
   extendsList = overlays: initial: fix (foldl' (flip extends) initial overlays);
 
   defaultUpdateExtend = defaultAttrs: attrs: updater: let
-    prev = recursiveUpdate defaultAttrs attrs;
-    final = recursiveUpdate prev (updater final prev);
+    prev = recursiveUpdate (applyAttrs defaultAttrs attrs) attrs;
+    final = let rhs = updater final prev; in recursiveUpdate prev (applyAttrs rhs prev);
   in
     final;
 

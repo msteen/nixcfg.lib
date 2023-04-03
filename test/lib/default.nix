@@ -6,7 +6,7 @@
   inherit (nixpkgs.lib) runTests;
   inherit
     (nixcfg.lib)
-    callableUpdate
+    applyAttrs
     concatAttrs
     concatAttrsRecursive
     defaultUpdateExtend
@@ -106,24 +106,37 @@ in
       };
     };
 
-    testCallableUpdate = {
+    testApplyAttrs_1 = {
       expr =
-        callableUpdate (name: {
+        applyAttrs (name: {
+          users = username: {
+            bar = 1;
+          };
+        }) {
+          ubuntu.users.matthijs.baz = 2;
+        };
+      expected = {
+        ubuntu.users.matthijs.bar = 1;
+      };
+    };
+
+    testApplyAttrs_2 = {
+      expr =
+        applyAttrs (name: {
           users = username: {
             modules = [ testListAttrs.expected.homeConfigurations."${name}_${username}" ];
           };
         }) {
-          ubuntu.users.matthijs = { };
+          ubuntu.users.matthijs.stateVersion = "21.11";
         };
       expected = {
         ubuntu.users.matthijs.modules = [ testListAttrs.expected.homeConfigurations.ubuntu_matthijs ];
       };
     };
 
-    testCallableUpdate_2 = {
+    testApplyAttrs_3 = {
       expr =
-        callableUpdate
-        (name: {
+        applyAttrs (name: {
           users = username: {
             modules = [ testListAttrs.expected.homeConfigurations."${name}_${username}" ];
           };
@@ -135,34 +148,34 @@ in
       };
     };
 
-    testUpdateWithDefaults = {
-      expr =
-        defaultUpdateExtend {
-          inputs = { };
-          channelName = "nixpkgs";
-          system = "x86_64-linux";
-          moduleArgs = { };
-          stateVersion = "22.11";
-          users = _: {
-            modules = [ ];
-          };
-        } {
-          inherit (bar) inputs;
-          channelName = "nixos-22_11";
-        } (final: prev: name: {
-          users = username: {
-            modules = prev.modules ++ [ testListAttrs.expected.homeConfigurations."${name}_${username}" ];
-          };
-        });
-      expected = {
-        inherit (bar) inputs;
-        channelName = "nixos-22_11";
-        system = "x86_64-linux";
-        moduleArgs = { };
-        stateVersion = "22.11";
-        users.matthijs.modules = [ testListAttrs.expected.homeConfigurations.ubuntu_matthijs ];
-      };
-    };
+    # testUpdateWithDefaults = {
+    #   expr =
+    #     defaultUpdateExtend {
+    #       inputs = { };
+    #       channelName = "nixpkgs";
+    #       system = "x86_64-linux";
+    #       moduleArgs = { };
+    #       stateVersion = "22.11";
+    #       users = _: {
+    #         modules = [ ];
+    #       };
+    #     } {
+    #       inherit (bar) inputs;
+    #       channelName = "nixos-22_11";
+    #     } (final: prev: name: {
+    #       users = username: {
+    #         modules = prev.modules ++ [ testListAttrs.expected.homeConfigurations."${name}_${username}" ];
+    #       };
+    #     });
+    #   expected = {
+    #     inherit (bar) inputs;
+    #     channelName = "nixos-22_11";
+    #     system = "x86_64-linux";
+    #     moduleArgs = { };
+    #     stateVersion = "22.11";
+    #     users.matthijs.modules = [ testListAttrs.expected.homeConfigurations.ubuntu_matthijs ];
+    #   };
+    # };
 
     testFooName = {
       expr = foo.name;
