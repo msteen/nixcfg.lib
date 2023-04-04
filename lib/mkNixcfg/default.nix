@@ -7,9 +7,9 @@
   inputs,
   ...
 } @ rawArgs: let
-  inherit (builtins) filter head mapAttrs match toJSON;
-  inherit (nixpkgs.lib) mapAttrs' nameValuePair;
-  inherit (nixcfg.lib) defaultUpdateExtend listAttrs;
+  inherit (builtins) catAttrs filter head mapAttrs match toJSON;
+  inherit (nixpkgs.lib) foldr mapAttrs' nameValuePair optionalAttrs;
+  inherit (nixcfg.lib) concatAttrs defaultUpdateExtend listAttrs;
 
   nixcfgs = import ./nixcfgs.nix { inherit inputs nixpkgs; };
 
@@ -58,6 +58,7 @@
               "The container configuration '${name}' is missing in 'container/configurations/'.")
           ];
       };
+      requiredInputs = [ "extra-container" ];
     };
     home = {
       default = _:
@@ -88,18 +89,31 @@
           };
         }
       );
+      requiredInputs = [ "home-manager" ];
     };
   };
+
+  nixcfgsInputs = concatAttrs (catAttrs "inputs" nixcfgs);
 
   args = let
     firstName = name: head (match "^([[:alnum:]]+).*" name);
   in
-    mapAttrs (name: configuration:
-      defaultUpdateExtend
-      configuration.default or { }
-      (mapAttrs' (name: _: nameValuePair (firstName name) { }) listedArgs."${name}Configurations"
-        // rawArgs."${name}Configurations" or { })
-      configuration.extend or (_: _: { }))
+    mapAttrs (name: configuration: let
+      args =
+        defaultUpdateExtend
+        configuration.default or { }
+        (mapAttrs' (name: _: nameValuePair (firstName name) { }) listedArgs."${name}Configurations"
+          // rawArgs."${name}Configurations" or { })
+        configuration.extend or (_: _: { });
+    in
+      optionalAttrs (args != { }) (foldr (
+          requiredInput: args:
+            if !(nixcfgsInputs ? ${requiredInput})
+            then throw "Host did not specify '${requiredInput}' as part of their inputs."
+            else args
+        )
+        args
+        configuration.requiredInputs or [ ]))
     configurations;
 in
   {

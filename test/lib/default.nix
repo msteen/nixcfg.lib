@@ -2,7 +2,15 @@
   nixpkgs,
   nixcfg,
 }: let
-  inherit (builtins) all attrValues catAttrs deepSeq tryEval;
+  inherit
+    (builtins)
+    all
+    attrValues
+    catAttrs
+    deepSeq
+    getFlake
+    tryEval
+    ;
   inherit (nixpkgs.lib) runTests;
   inherit
     (nixcfg.lib)
@@ -37,6 +45,8 @@
       nixcfg-foo = foo;
     };
   };
+
+  inherit (getFlake ".") inputs;
 in
   runTests rec {
     testConcatAttrs = {
@@ -199,12 +209,33 @@ in
       expected = true;
     };
 
+    testRequiredInputHomeManager = {
+      expr = let
+        self = mkNixcfg {
+          name = "example";
+          path = ./nixcfg;
+          inputs = {
+            inherit self;
+          };
+        };
+        expr = self.homeConfigurationsArgs;
+      in
+        tryEval (deepSeq expr expr);
+      expected = {
+        success = false;
+        value = false;
+      };
+    };
+
     testNixosConfigurationsArgs = {
       expr = let
         self = mkNixcfg {
           name = "example";
           path = ./nixcfg;
-          inputs = { inherit self; };
+          inputs = {
+            inherit self;
+            inherit (inputs) home-manager;
+          };
         };
       in
         self.nixosConfigurationsArgs;
@@ -225,7 +256,10 @@ in
         self = mkNixcfg {
           name = "example";
           path = ./nixcfg;
-          inputs = { inherit self; };
+          inputs = {
+            inherit self;
+            inherit (inputs) home-manager;
+          };
           homeConfigurations.ubuntu = {
             stateVersion = "21.11";
           };
