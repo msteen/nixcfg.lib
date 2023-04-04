@@ -73,7 +73,7 @@
         homeConfigurationArgs = prev.${name};
         invalidOptions =
           filter (option: homeConfigurationArgs ? ${option} && homeConfigurationArgs.${option} != nixosConfigurationArgs.${option})
-          [ "inputs" "system" "channelName" "stateVersion" ];
+          [ "system" "channelName" "stateVersion" ];
       in (
         if args.nixos ? ${name} && invalidOptions != [ ]
         then throw "The home configuration of '${name}' has the options ${toJSON invalidOptions} that do not equal those found in its NixOS configuration."
@@ -98,22 +98,27 @@
   args = let
     firstName = name: head (match "^([[:alnum:]]+).*" name);
   in
-    mapAttrs (name: configuration: let
+    mapAttrs (type: configuration: let
       args =
         defaultUpdateExtend
         configuration.default or { }
-        (mapAttrs' (name: _: nameValuePair (firstName name) { }) listedArgs."${name}Configurations"
-          // rawArgs."${name}Configurations" or { })
+        (mapAttrs' (name: _: nameValuePair (firstName name) { }) listedArgs."${type}Configurations"
+          // rawArgs."${type}Configurations" or { })
         configuration.extend or (_: _: { });
     in
-      optionalAttrs (args != { }) (foldr (
-          requiredInput: args:
-            if !(nixcfgsInputs ? ${requiredInput})
-            then throw "Host did not specify '${requiredInput}' as part of their inputs."
-            else args
-        )
-        args
-        configuration.requiredInputs or [ ]))
+      mapAttrs (
+        name: args:
+          foldr (
+            requiredInput: accum: (
+              if !(nixcfgsInputs ? ${requiredInput} || args.inputs ? ${requiredInput})
+              then throw "Host did not specify '${requiredInput}' as part of their inputs."
+              else accum
+            )
+          )
+          args
+          configuration.requiredInputs or [ ]
+      )
+      args)
     configurations;
 in
   {

@@ -113,7 +113,6 @@ in
         nixosProfiles = { };
         homeConfigurations = {
           ubuntu_matthijs = ./nixcfg/home/configurations/ubuntu/matthijs.nix;
-          macbook = ./nixcfg/home/configurations/macbook.nix;
         };
       };
     };
@@ -236,7 +235,6 @@ in
           path = ./nixcfg;
           inputs = {
             inherit self;
-            inherit (inputs) home-manager;
           };
         };
       in
@@ -249,6 +247,32 @@ in
           modules = [ ./nixcfg/nixos/configurations/ubuntu ];
           stateVersion = "22.11";
           system = "x86_64-linux";
+        };
+      };
+    };
+
+    testHomeConfigurationsInputs = {
+      expr = let
+        self = mkNixcfg {
+          name = "example";
+          path = ./nixcfg;
+          inputs = {
+            inherit self;
+          };
+          homeConfigurations.ubuntu.inputs = {
+            inherit (inputs) home-manager;
+          };
+        };
+      in
+        self.homeConfigurationsArgs;
+      expected = {
+        ubuntu = {
+          channelName = "nixpkgs";
+          inputs = { home-manager = "/nix/store/w034zh2771r29d4vmgj0jakby6b1j0i0-source"; };
+          moduleArgs = { };
+          stateVersion = "22.11";
+          system = "x86_64-linux";
+          users = { };
         };
       };
     };

@@ -31,9 +31,9 @@
     singleton
     ;
 in rec {
-  traceJson = x: builtins.trace (builtins.toJSON x) x;
-  traceJsonMap = f: x: builtins.trace (builtins.toJSON (f x)) x;
-  traceJsonValue = value: traceJsonMap (const value);
+  traceJSON = x: builtins.trace (builtins.toJSON x) x;
+  traceJSONMap = f: x: builtins.trace (builtins.toJSON (f x)) x;
+  traceJSONValue = value: traceJSONMap (const value);
 
   concatAttrs = foldl' (a: b: a // b) { };
   concatAttrsRecursive = foldl' (a: b: recursiveUpdate a b) { };
