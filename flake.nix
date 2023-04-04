@@ -14,16 +14,13 @@
       nixcfg = self;
     };
     tests = let
-      inherit (builtins) toJSON;
       results = import ./test/lib {
         inherit nixpkgs;
         nixcfg = self;
       };
     in
-      toJSON (
-        if results == [ ]
-        then null
-        else results
-      );
+      if results == [ ]
+      then null
+      else results;
   };
 }
