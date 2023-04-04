@@ -3,7 +3,7 @@ set -euo pipefail
 cd "$(dirname -- "$([[ -v BASH_SOURCE ]] && echo "${BASH_SOURCE[0]}" || echo "$0")")"
 cd ..
 
-out=$(nix eval .#tests)
+out=$(nix eval .#tests "$@")
 if [[ $out == null ]]; then
     echo "all tests passed"
 else
