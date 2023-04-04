@@ -7,7 +7,7 @@
   inputs,
   ...
 } @ rawArgs: let
-  inherit (builtins) mapAttrs;
+  inherit (builtins) filter head mapAttrs match toJSON;
   inherit (nixpkgs.lib) mapAttrs' nameValuePair;
   inherit (nixcfg.lib) defaultUpdateExtend listAttrs;
 
@@ -42,7 +42,7 @@
           prev.${name}.modules
           ++ [
             listedArgs.nixosConfigurations.${name}
-            or (abort
+            or (throw
               "The nixos configuration '${name}' is missing in 'nixos/configurations/'.")
           ];
       };
@@ -54,7 +54,7 @@
           prev.${name}.modules
           ++ [
             listedArgs.containerConfigurations.${name}
-            or (abort
+            or (throw
               "The container configuration '${name}' is missing in 'container/configurations/'.")
           ];
       };
@@ -67,29 +67,43 @@
             modules = [ ];
           };
         };
-      extend = final: prev: name: {
-        users = username: {
-          modules =
-            prev.${name}.users.${username}.modules
-            ++ [
-              listedArgs.homeConfigurations."${name}_${username}"
-              or (abort
-                "The home configuration '${name}' is missing a user configuration for '${username}' in 'home/configurations/${name}/'.")
-            ];
-        };
-      };
+      extend = final: prev: name: let
+        nixosConfigurationArgs = args.nixos.${name};
+        homeConfigurationArgs = prev.${name};
+        invalidOptions =
+          filter (option: homeConfigurationArgs ? ${option} && homeConfigurationArgs.${option} != nixosConfigurationArgs.${option})
+          [ "inputs" "system" "channelName" "stateVersion" ];
+      in (
+        if args.nixos ? ${name} && invalidOptions != [ ]
+        then throw "The home configuration of '${name}' has the options ${toJSON invalidOptions} that do not equal those found in its NixOS configuration."
+        else {
+          users = username: {
+            modules =
+              prev.${name}.users.${username}.modules
+              ++ [
+                listedArgs.homeConfigurations."${name}_${username}"
+                or (throw
+                  "The home configuration '${name}' is missing a user configuration for '${username}' in 'home/configurations/${name}/'.")
+              ];
+          };
+        }
+      );
     };
   };
 
-  args = mapAttrs (name: configuration:
-    defaultUpdateExtend
-    configuration.default or { }
-    (mapAttrs (_: _: { }) listedArgs."${name}Configurations" // rawArgs."${name}Configurations" or { })
-    configuration.extend or (_: _: { }))
-  configurations;
+  args = let
+    firstName = name: head (match "^([[:alnum:]]+).*" name);
+  in
+    mapAttrs (name: configuration:
+      defaultUpdateExtend
+      configuration.default or { }
+      (mapAttrs' (name: _: nameValuePair (firstName name) { }) listedArgs."${name}Configurations"
+        // rawArgs."${name}Configurations" or { })
+      configuration.extend or (_: _: { }))
+    configurations;
 in
   {
     inherit inputs name nixcfgs;
     outPath = path;
   }
-  // mapAttrs' (name: nameValuePair "${name}ConfigurationArgs") args
+  // mapAttrs' (name: nameValuePair "${name}ConfigurationsArgs") args

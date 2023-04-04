@@ -2,7 +2,7 @@
   nixpkgs,
   nixcfg,
 }: let
-  inherit (builtins) all attrValues catAttrs;
+  inherit (builtins) all attrValues catAttrs deepSeq tryEval;
   inherit (nixpkgs.lib) runTests;
   inherit
     (nixcfg.lib)
@@ -199,7 +199,7 @@ in
       expected = true;
     };
 
-    testNixosConfigurationArgs = {
+    testNixosConfigurationsArgs = {
       expr = let
         self = mkNixcfg {
           name = "example";
@@ -207,7 +207,7 @@ in
           inputs = { inherit self; };
         };
       in
-        self.nixosConfigurationArgs;
+        self.nixosConfigurationsArgs;
       expected = {
         ubuntu = {
           channelName = "nixpkgs";
@@ -217,6 +217,25 @@ in
           stateVersion = "22.11";
           system = "x86_64-linux";
         };
+      };
+    };
+
+    testHomeInvalidOptions = {
+      expr = let
+        self = mkNixcfg {
+          name = "example";
+          path = ./nixcfg;
+          inputs = { inherit self; };
+          homeConfigurations.ubuntu = {
+            stateVersion = "21.11";
+          };
+        };
+        expr = self.homeConfigurationsArgs;
+      in
+        tryEval (deepSeq expr expr);
+      expected = {
+        success = false;
+        value = false;
       };
     };
   }
