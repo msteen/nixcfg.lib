@@ -82,7 +82,7 @@ in
     };
 
     testListAttrs = {
-      expr = listAttrs ./list-attrs {
+      expr = listAttrs ./nixcfg {
         lib."overlay.nix" = "libOverlay";
         pkgs."overlay.nix" = "overlay";
         nixos.configurations = "nixosConfigurations";
@@ -91,17 +91,17 @@ in
         home.configurations = "homeConfigurations";
       };
       expected = {
-        libOverlay = ./list-attrs/lib/overlay.nix;
+        libOverlay = ./nixcfg/lib/overlay.nix;
         nixosConfigurations = {
-          test = ./list-attrs/nixos/configurations/test;
+          ubuntu = ./nixcfg/nixos/configurations/ubuntu;
         };
         nixosModules = {
-          test = ./list-attrs/nixos/modules/test.nix;
+          test = ./nixcfg/nixos/modules/test.nix;
         };
         nixosProfiles = { };
         homeConfigurations = {
-          ubuntu_matthijs = ./list-attrs/home/configurations/ubuntu/matthijs.nix;
-          macbook = ./list-attrs/home/configurations/macbook.nix;
+          ubuntu_matthijs = ./nixcfg/home/configurations/ubuntu/matthijs.nix;
+          macbook = ./nixcfg/home/configurations/macbook.nix;
         };
       };
     };
@@ -167,7 +167,9 @@ in
           };
         } (final: prev: name: {
           users = username: {
-            modules = prev.${name}.users.${username}.modules ++ [ testListAttrs.expected.homeConfigurations."${name}_${username}" ];
+            modules =
+              prev.${name}.users.${username}.modules
+              ++ [ testListAttrs.expected.homeConfigurations."${name}_${username}" ];
           };
         });
       expected = {
@@ -195,5 +197,26 @@ in
     testBazInputsOutPath = {
       expr = all (input: input ? outPath) (attrValues baz.inputs);
       expected = true;
+    };
+
+    testNixosConfigurationArgs = {
+      expr = let
+        self = mkNixcfg {
+          name = "example";
+          path = ./nixcfg;
+          inputs = { inherit self; };
+        };
+      in
+        self.nixosConfigurationArgs;
+      expected = {
+        ubuntu = {
+          channelName = "nixpkgs";
+          inputs = { };
+          moduleArgs = { };
+          modules = [ ./nixcfg/nixos/configurations/ubuntu ];
+          stateVersion = "22.11";
+          system = "x86_64-linux";
+        };
+      };
     };
   }
