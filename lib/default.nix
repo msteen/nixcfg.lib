@@ -38,6 +38,18 @@ in rec {
   concatAttrs = foldl' (a: b: a // b) { };
   concatAttrsRecursive = foldl' (a: b: recursiveUpdate a b) { };
 
+  optionalInherit = attrs: names:
+    listToAttrs (concatMap (name:
+      if attrs ? ${name}
+      then [
+        {
+          inherit name;
+          value = attrs.${name};
+        }
+      ]
+      else [ ])
+    names);
+
   applyAttrs = let
     recurDefault = lhs:
       if isAttrs lhs

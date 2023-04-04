@@ -8,10 +8,46 @@
   ...
 } @ rawArgs: let
   inherit (builtins) catAttrs filter head mapAttrs match toJSON;
-  inherit (nixpkgs.lib) foldr mapAttrs' nameValuePair optionalAttrs;
-  inherit (nixcfg.lib) concatAttrs defaultUpdateExtend listAttrs;
+  inherit (nixpkgs.lib) foldr mapAttrs' nameValuePair;
+  inherit (nixcfg.lib) concatAttrs defaultUpdateExtend extendsList listAttrs optionalInherit;
 
-  nixcfgs = import ./nixcfgs.nix { inherit inputs nixpkgs; };
+  # mkChannels = inputs: import ./mkChannels.nix { inherit nixpkgs; } inputs;
+
+  nixcfgs = import ./mkNixcfgs.nix { inherit nixpkgs; } inputs;
+  nixcfgsInputs = concatAttrs (catAttrs "inputs" nixcfgs);
+  # nixcfgsChannels = mkChannels nixcfgsInputs;
+  nixcfgsLib = let
+    channelName = rawArgs.lib.channelName or null;
+    input =
+      if channelName != null
+      then
+        inputs.${channelName}
+        or (throw "The lib nixpkgs channel '${channelName}' does not exist.")
+      else nixpkgs;
+  in
+    extendsList (catAttrs "libOverlay" nixcfgs) (final:
+      nixcfg.lib
+      // {
+        lib = input.lib // { inherit input; };
+      });
+
+  # mkSpecialArgs = channels: name: {
+  #   inputs,
+  #   channelName,
+  #   moduleArgs,
+  #   ...
+  # }: let
+  #   inherit (builtins) listToAttrs;
+  #   inherit (channels.${channelName}.input.lib) nameValuePair;
+  # in
+  #   {
+  #     inherit inputs name;
+  #     nixcfg = inputs.self // { lib = nixcfgsLib; };
+  #     nixcfgs = listToAttrs (map (nixcfg: nameValuePair nixcfg.name nixcfg) nixcfgs);
+  #   }
+  #   // moduleArgs;
+
+  # mkNixosModules = import ./mkNixosModules;
 
   listedArgs = listAttrs path ({
       lib."overlay.nix" = "libOverlay";
@@ -46,6 +82,14 @@
               "The nixos configuration '${name}' is missing in 'nixos/configurations/'.")
           ];
       };
+      # apply = args: let
+      #   inherit (args) lib;
+      # in
+      #   lib.nixosSystem {
+      #     inherit lib system;
+      #     specialArgs = mkSpecialArgs args;
+      #     modules = mkNixosModules args;
+      #   };
     };
     container = {
       default = _: default // { modules = [ ]; };
@@ -59,6 +103,19 @@
           ];
       };
       requiredInputs = [ "extra-container" ];
+      # apply = {
+      #   name,
+      #   inputs,
+      #   system,
+      #   channel,
+      #   ...
+      # } @ args:
+      #   inputs.extra-container.lib.buildContainers {
+      #     inherit system;
+      #     nixpkgs = channel.input.outPath;
+      #     # FXIME
+      #     config.containers.${name} = { };
+      #   };
     };
     home = {
       default = _:
@@ -90,10 +147,18 @@
         }
       );
       requiredInputs = [ "home-manager" ];
+      # apply = {
+      #   inputs,
+      #   pkgs,
+      #   ...
+      # } @ args:
+      #   import (inputs.home-manager + "/modules") {
+      #     inherit pkgs;
+      #     extraSpecialArgs = mkSpecialArgs args;
+      #     check = true;
+      #   };
     };
   };
-
-  nixcfgsInputs = concatAttrs (catAttrs "inputs" nixcfgs);
 
   args = let
     firstName = name: head (match "^([[:alnum:]]+).*" name);
@@ -124,5 +189,7 @@ in
   {
     inherit inputs name nixcfgs;
     outPath = path;
+    lib = nixcfgsLib;
   }
   // mapAttrs' (name: nameValuePair "${name}ConfigurationsArgs") args
+  // mapAttrs (_: import) (optionalInherit listedArgs [ "libOverlay" "overlay" ])

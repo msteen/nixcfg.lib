@@ -1,7 +1,4 @@
-{
-  nixpkgs,
-  inputs,
-}: let
+{ nixpkgs }: inputs: let
   inherit (builtins) mapAttrs;
   inherit (nixpkgs.lib) filterAttrs hasPrefix;
 

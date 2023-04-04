@@ -298,4 +298,57 @@ in
         value = false;
       };
     };
+
+    testNixcfgsLib_1 = {
+      expr = let
+        self = mkNixcfg {
+          name = "example";
+          path = ./nixcfg;
+          inputs = {
+            inherit self;
+            inherit (inputs) home-manager;
+          };
+        };
+        inherit (self) lib;
+      in
+        (lib.lib.input.outPath or null) == nixpkgs.outPath && lib ? mkNixcfg;
+      expected = true;
+    };
+
+    testNixcfgsLib_2 = {
+      expr = let
+        self = mkNixcfg {
+          name = "example";
+          path = ./nixcfg;
+          inputs = {
+            inherit self;
+            inherit (inputs) home-manager;
+          };
+          lib.channelName = "foo";
+        };
+        inherit (self) lib;
+        expr = lib.lib ? input;
+      in
+        tryEval (deepSeq expr expr);
+      expected = {
+        success = false;
+        value = false;
+      };
+    };
+
+    testNixcfgsLib_3 = {
+      expr = let
+        self = mkNixcfg {
+          name = "example";
+          path = ./nixcfg;
+          inputs = {
+            inherit self;
+            inherit (inputs) home-manager;
+          };
+        };
+        inherit (self) lib;
+      in
+        lib.overlay or null == true;
+      expected = true;
+    };
   }
