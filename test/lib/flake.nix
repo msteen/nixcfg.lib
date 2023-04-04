@@ -8,5 +8,5 @@
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = inputs: inputs;
+  outputs = _: { };
 }

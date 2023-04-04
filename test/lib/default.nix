@@ -8,7 +8,9 @@
     attrValues
     catAttrs
     deepSeq
+    fromJSON
     getFlake
+    readFile
     tryEval
     ;
   inherit (nixpkgs.lib) runTests;
@@ -46,7 +48,7 @@
     };
   };
 
-  inherit (getFlake ".") inputs;
+  inputs = fromJSON (readFile ./flake.json);
 in
   runTests rec {
     testConcatAttrs = {
