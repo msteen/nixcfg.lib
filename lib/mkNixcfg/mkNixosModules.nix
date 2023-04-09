@@ -1,13 +1,20 @@
 {
+  nixpkgs,
+  self,
+  nixcfgs,
+  nixcfgsChannels,
+}: {
   name,
+  inputs,
   system,
-  modules,
-  stateVersion,
   pkgs,
+  stateVersion,
+  modules,
   ...
 }: let
-  inherit (builtins) attrValues catAttrs concatMap concatStringsSep hashString substring;
-  inherit (pkgs.input.lib) mapAttrs' mkDefault mkIf versionAtLeast;
+  inherit (builtins) attrValues catAttrs concatMap concatStringsSep hashString mapAttrs substring;
+  inherit (nixpkgs.lib) mapAttrs' versionAtLeast;
+  inherit (pkgs.lib) mkDefault mkIf optional;
 in
   concatMap attrValues (catAttrs "nixosModules" nixcfgs)
   ++ modules
@@ -33,5 +40,8 @@ in
 
       system.configurationRevision = mkIf (self ? rev) self.rev;
       system.stateVersion = stateVersion;
+
+      system.nixos.revision = mkDefault config.system.configurationRevision;
+      system.nixos.versionSuffix = mkDefault pkgs.lib.trivial.versionSuffix;
     })
   ]

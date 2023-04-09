@@ -129,4 +129,9 @@ in rec {
   listAttrs = import ./listAttrs.nix { inherit nixcfg nixpkgs; };
 
   mkNixcfg = import ./mkNixcfg { inherit nixcfg nixpkgs; };
+
+  dummyNixosModule = {
+    boot.loader.grub.enable = false;
+    fileSystems."/".device = "/dev/null";
+  };
 }

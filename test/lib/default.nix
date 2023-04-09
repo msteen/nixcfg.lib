@@ -10,7 +10,9 @@
     deepSeq
     fromJSON
     getFlake
+    mapAttrs
     readFile
+    trace
     tryEval
     ;
   inherit (nixpkgs.lib) runTests;
@@ -20,6 +22,7 @@
     concatAttrs
     concatAttrsRecursive
     defaultUpdateExtend
+    dummyNixosModule
     extendsList
     listAttrs
     mkNixcfg
@@ -48,9 +51,9 @@
     };
   };
 
-  inputs = fromJSON (readFile ./flake.json);
-in
-  runTests rec {
+  inputs = mapAttrs (_: input: { outPath = /. + input; }) (fromJSON (readFile ./flake.json));
+
+  tests = rec {
     testConcatAttrs = {
       expr = concatAttrs [ { foo = 1; } { bar = 2; } { foo = 3; } ];
       expected = {
@@ -268,7 +271,7 @@ in
       expected = {
         ubuntu = {
           channelName = "nixpkgs";
-          inputs = { home-manager = "/nix/store/w034zh2771r29d4vmgj0jakby6b1j0i0-source"; };
+          inputs = { home-manager = { outPath = /nix/store/w034zh2771r29d4vmgj0jakby6b1j0i0-source; }; };
           moduleArgs = { };
           stateVersion = "22.11";
           system = "x86_64-linux";
@@ -351,4 +354,21 @@ in
         lib.overlay or null == true;
       expected = true;
     };
-  }
+
+    testNixosConfigurations = {
+      expr = let
+        self = mkNixcfg {
+          name = "example";
+          path = ./nixcfg;
+          inputs = {
+            inherit self;
+            inherit (inputs) home-manager nixpkgs;
+          };
+        };
+      in
+        self.nixosConfigurations.ubuntu.config.system.build ? toplevel;
+      expected = true;
+    };
+  };
+in
+  runTests tests
