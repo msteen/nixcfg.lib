@@ -413,6 +413,30 @@
         fails self.nixosConfigurations.ubuntu.pkgs.vscode.outPath;
       expected = true;
     };
+
+    testContainerConfigurationsArgs = {
+      expr = let
+        self = mkNixcfg {
+          name = "example";
+          path = ./nixcfg;
+          inputs = {
+            inherit self;
+            inherit (inputs) extra-container;
+          };
+        };
+      in
+        self.containerConfigurationsArgs;
+      expected = {
+        hello = {
+          channelName = "nixpkgs";
+          inputs = { };
+          moduleArgs = { };
+          modules = [ ./nixcfg/container/configs/hello/nixos.nix ];
+          stateVersion = "22.11";
+          system = "x86_64-linux";
+        };
+      };
+    };
   };
 in
   runTests tests

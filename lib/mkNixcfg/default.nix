@@ -98,25 +98,35 @@
         modules =
           prev.${name}.modules
           ++ [
-            listedArgs.containerConfigurations.${name}
+            listedArgs.containerConfigurations."${name}_nixos"
             or (throw
               "The container configuration '${name}' is missing in 'container/configurations/'.")
           ];
       };
       requiredInputs = [ "extra-container" ];
-      # apply = {
-      #   name,
-      #   inputs,
-      #   system,
-      #   channel,
-      #   ...
-      # } @ args:
-      #   inputs.extra-container.lib.buildContainers {
-      #     inherit system;
-      #     nixpkgs = channel.input.outPath;
-      #     # FXIME
-      #     config.containers.${name} = { };
-      #   };
+      apply = {
+        name,
+        inputs,
+        system,
+        pkgs,
+        lib,
+        ...
+      } @ args: let
+        inherit (lib) mkMerge;
+      in
+        inputs.extra-container.lib.buildContainers {
+          inherit system;
+          nixpkgs = pkgs.input;
+          config.containers.${name} = mkMerge [
+            {
+              specialArgs = mkSpecialArgs args;
+              config = {
+                imports = mkNixosModules args;
+              };
+            }
+            listedArgs.containerConfigurations."${name}_container" or { }
+          ];
+        };
     };
     home = {
       default = _:
