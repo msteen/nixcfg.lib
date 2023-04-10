@@ -285,7 +285,7 @@
       expected = {
         ubuntu = {
           channelName = "nixpkgs";
-          inputs = { home-manager = { outPath = /nix/store/w034zh2771r29d4vmgj0jakby6b1j0i0-source; }; };
+          inputs = { inherit (inputs) home-manager; };
           moduleArgs = { };
           stateVersion = "22.11";
           system = "x86_64-linux";
