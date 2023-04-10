@@ -60,7 +60,7 @@
       secrets = "secrets";
     }
     // mapAttrs (name: _: {
-      configurations = "${name}Configurations";
+      configs = "${name}Configurations";
       modules = "${name}Modules";
       profiles = "${name}Profiles";
     })

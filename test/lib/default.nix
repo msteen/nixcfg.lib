@@ -118,22 +118,22 @@
       expr = listAttrs ./nixcfg {
         lib."overlay.nix" = "libOverlay";
         pkgs."overlay.nix" = "overlay";
-        nixos.configurations = "nixosConfigurations";
+        nixos.configs = "nixosConfigurations";
         nixos.modules = "nixosModules";
         nixos.profiles = "nixosProfiles";
-        home.configurations = "homeConfigurations";
+        home.configs = "homeConfigurations";
       };
       expected = {
         libOverlay = ./nixcfg/lib/overlay.nix;
         nixosConfigurations = {
-          ubuntu = ./nixcfg/nixos/configurations/ubuntu;
+          ubuntu = ./nixcfg/nixos/configs/ubuntu;
         };
         nixosModules = {
           test = ./nixcfg/nixos/modules/test.nix;
         };
         nixosProfiles = { };
         homeConfigurations = {
-          ubuntu_matthijs = ./nixcfg/home/configurations/ubuntu/matthijs.nix;
+          ubuntu_matthijs = ./nixcfg/home/configs/ubuntu/matthijs.nix;
         };
       };
     };
@@ -261,7 +261,7 @@
           channelName = "nixpkgs";
           inputs = { };
           moduleArgs = { };
-          modules = [ ./nixcfg/nixos/configurations/ubuntu ];
+          modules = [ ./nixcfg/nixos/configs/ubuntu ];
           stateVersion = "22.11";
           system = "x86_64-linux";
         };
