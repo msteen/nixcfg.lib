@@ -1,4 +1,7 @@
-{ nixpkgs }: inputs: let
+{
+  nixpkgs,
+  channels,
+}: inputs: let
   inherit (builtins) mapAttrs;
   inherit (nixpkgs.lib) filterAttrs hasPrefix optionalString;
 
@@ -43,18 +46,17 @@
       };
 
   getChannels = system:
-    mapAttrs (_: input: { inherit input system; }) channelInputs;
-  # FIXME
-  # // mapAttrs (
-  #   name: {
-  #     input ?
-  #       channelInputs.${name}
-  #       or abort "Channel '${name}' is missing the required input attribute or does not have it implicit through inputs.",
-  #     ...
-  #   } @ channel:
-  #     channel // { inherit input system; }
-  # )
-  # args.channels or { };
+    mapAttrs (_: input: { inherit input system; }) channelInputs
+    // mapAttrs (
+      name: {
+        input ?
+          channelInputs.${name}
+          or abort "Channel '${name}' is missing the required input attribute or does not have it implicit through inputs.",
+        ...
+      } @ channel:
+        channel // { inherit input system; }
+    )
+    channels;
 
   importChannel = {
     input,

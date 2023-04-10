@@ -369,6 +369,26 @@
         self.nixosConfigurations.ubuntu.config.system.build ? toplevel;
       expected = true;
     };
+
+    testChannels_1 = {
+      expr = let
+        self = mkNixcfg {
+          name = "example";
+          path = ./nixcfg;
+          inputs = {
+            inherit self;
+            inherit (inputs) home-manager nixpkgs;
+          };
+          channels.nixpkgs2 = {
+            input = inputs.nixpkgs;
+            overlays = [ (final: prev: { overlay2 = true; }) ];
+          };
+          nixosConfigurations.ubuntu.channelName = "nixpkgs2";
+        };
+      in
+        self.nixosConfigurations.ubuntu.pkgs ? overlay2;
+      expected = true;
+    };
   };
 in
   runTests tests

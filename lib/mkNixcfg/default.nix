@@ -13,7 +13,12 @@
 
   inherit (inputs) self;
 
-  mkChannels = inputs: import ./mkChannels.nix { inherit nixpkgs; } inputs;
+  mkChannels = inputs:
+    import ./mkChannels.nix {
+      inherit nixpkgs;
+      channels = rawArgs.channels or { };
+    }
+    inputs;
 
   nixcfgs = import ./mkNixcfgs.nix { inherit nixpkgs; } inputs;
   nixcfgsInputs = concatAttrs (catAttrs "inputs" nixcfgs);
