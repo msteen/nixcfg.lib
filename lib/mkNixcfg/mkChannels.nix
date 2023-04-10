@@ -51,7 +51,7 @@
       name: {
         input ?
           channelInputs.${name}
-          or abort "Channel '${name}' is missing the required input attribute or does not have it implicit through inputs.",
+          or (throw "Channel '${name}' is missing the required input attribute or does not have it implicit through inputs."),
         ...
       } @ channel:
         channel // { inherit input system; }

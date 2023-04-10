@@ -53,6 +53,8 @@
 
   inputs = mapAttrs (_: input: { outPath = /. + input; }) (fromJSON (readFile ./flake.json));
 
+  fails = expr: !(tryEval (deepSeq expr expr)).success;
+
   tests = rec {
     testConcatAttrs = {
       expr = concatAttrs [ { foo = 1; } { bar = 2; } { foo = 3; } ];
@@ -222,13 +224,9 @@
             inherit self;
           };
         };
-        expr = self.homeConfigurationsArgs;
       in
-        tryEval (deepSeq expr expr);
-      expected = {
-        success = false;
-        value = false;
-      };
+        fails self.homeConfigurationsArgs;
+      expected = true;
     };
 
     testNixosConfigurationsArgs = {
@@ -293,13 +291,9 @@
             stateVersion = "21.11";
           };
         };
-        expr = self.homeConfigurationsArgs;
       in
-        tryEval (deepSeq expr expr);
-      expected = {
-        success = false;
-        value = false;
-      };
+        fails self.homeConfigurationsArgs;
+      expected = true;
     };
 
     testNixcfgsLib_1 = {
@@ -330,13 +324,9 @@
           lib.channelName = "foo";
         };
         inherit (self) lib;
-        expr = lib.lib ? input;
       in
-        tryEval (deepSeq expr expr);
-      expected = {
-        success = false;
-        value = false;
-      };
+        fails (lib.lib ? input);
+      expected = true;
     };
 
     testNixcfgsLib_3 = {
@@ -387,6 +377,24 @@
         };
       in
         self.nixosConfigurations.ubuntu.pkgs ? overlay2;
+      expected = true;
+    };
+
+    testChannels_2 = {
+      expr = let
+        self = mkNixcfg {
+          name = "example";
+          path = ./nixcfg;
+          inputs = {
+            inherit self;
+            inherit (inputs) home-manager nixpkgs;
+          };
+          channels.nixpkgs = {
+            config = { allowUnfree = false; };
+          };
+        };
+      in
+        fails self.nixosConfigurations.ubuntu.pkgs.vscode.outPath;
       expected = true;
     };
   };
