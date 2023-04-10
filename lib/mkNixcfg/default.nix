@@ -160,11 +160,11 @@
     };
   };
 
-  configurationsRawArgs = let
+  configurationsArgs = let
     firstName = name: head (match "^([[:alnum:]]+).*" name);
   in
     mapAttrs (type: configuration: let
-      configurationsRawArgs =
+      configurationsArgs =
         defaultUpdateExtend
         configuration.default or { }
         (mapAttrs' (name: _: nameValuePair (firstName name) { }) listedArgs."${type}Configurations"
@@ -172,35 +172,35 @@
         configuration.extend or (_: _: { });
     in
       mapAttrs (
-        name: configurationRawArgs:
+        name: configurationArgs:
           foldr (
             requiredInput: accum: (
-              if !(nixcfgsInputs ? ${requiredInput} || configurationRawArgs.inputs ? ${requiredInput})
+              if !(nixcfgsInputs ? ${requiredInput} || configurationArgs.inputs ? ${requiredInput})
               then throw "Host did not specify '${requiredInput}' as part of their inputs."
               else accum
             )
           )
-          configurationRawArgs
+          configurationArgs
           configuration.requiredInputs or [ ]
       )
-      configurationsRawArgs)
+      configurationsArgs)
     types;
 
-  configurationsArgs = mapAttrs (_: configurationsRawArgs:
-    recursiveUpdate configurationsRawArgs (mapAttrs (name: configurationRawArgs: let
-        inputs = removeAttrs rawArgs.inputs [ "self" ] // configurationRawArgs.inputs;
+  applyArgs = mapAttrs (_: configurationsArgs:
+    recursiveUpdate configurationsArgs (mapAttrs (name: configurationArgs: let
+        inputs = removeAttrs rawArgs.inputs [ "self" ] // configurationArgs.inputs;
         channels = recursiveUpdate nixcfgsChannels (mkChannels inputs);
-        pkgs = channels.${configurationRawArgs.channelName};
+        pkgs = channels.${configurationArgs.channelName};
       in {
         inherit inputs name pkgs;
         inherit (pkgs) lib;
       })
-      configurationsRawArgs))
-  configurationsRawArgs;
+      configurationsArgs))
+  configurationsArgs;
 
   configurations = mapAttrs (name: type:
     mapAttrs (_: args: (type.apply or (_: { }) args))
-    configurationsArgs.${name})
+    applyArgs.${name})
   types;
 in
   {
@@ -208,6 +208,6 @@ in
     outPath = path;
     lib = nixcfgsLib;
   }
-  // mapAttrs' (name: nameValuePair "${name}ConfigurationsArgs") configurationsRawArgs
+  // mapAttrs' (name: nameValuePair "${name}ConfigurationsArgs") configurationsArgs
   // mapAttrs' (name: nameValuePair "${name}Configurations") configurations
   // mapAttrs (_: import) (optionalInherit listedArgs [ "libOverlay" "overlay" ])
