@@ -437,6 +437,22 @@
         };
       };
     };
+
+    testInvalidConfigurationSystem = {
+      expr = let
+        self = mkNixcfg {
+          name = "example";
+          path = ./nixcfg;
+          inputs = {
+            inherit self;
+          };
+          systems = [ "aarch64-linux" ];
+          nixosConfigurations.ubuntu.system = "x86_64-linux";
+        };
+      in
+        fails self.nixosConfigurationsArgs.ubuntu;
+      expected = true;
+    };
   };
 in
   runTests tests

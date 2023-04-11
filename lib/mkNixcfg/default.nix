@@ -2,7 +2,7 @@
   nixpkgs,
   nixcfg,
 }: rawArgs: let
-  inherit (builtins) catAttrs filter head listToAttrs mapAttrs match toJSON;
+  inherit (builtins) catAttrs elem filter head listToAttrs mapAttrs match toJSON;
   inherit (nixpkgs.lib) foldr mapAttrs' nameValuePair recursiveUpdate;
   inherit (nixcfg.lib) applyAttrs concatAttrs defaultUpdateExtend extendsList listAttrs optionalInherit;
 
@@ -141,7 +141,7 @@
           [ "system" "channelName" "stateVersion" ];
       in
         if configurationsArgs.nixos ? ${name} && invalidOptions != [ ]
-        then throw "The home configuration of '${name}' has the options ${toJSON invalidOptions} that do not equal those found in its NixOS configuration."
+        then throw "The home configuration '${name}' has the options ${toJSON invalidOptions} that do not equal those found in its NixOS configuration."
         else {
           users = username: {
             modules =
@@ -179,16 +179,24 @@
         configuration.extend or (_: _: { });
     in
       mapAttrs (
-        name: configurationArgs:
-          foldr (
-            requiredInput: accum: (
-              if !(nixcfgsInputs ? ${requiredInput} || configurationArgs.inputs ? ${requiredInput})
-              then throw "Host did not specify '${requiredInput}' as part of their inputs."
-              else accum
+        name: {
+          inputs,
+          system,
+          channelName,
+          ...
+        } @ configurationArgs:
+          if !(elem system systems)
+          then throw "The ${type} configuration '${name}' has system '${system}', which is not listed in the supported systems."
+          else
+            foldr (
+              requiredInput: accum: (
+                if !(nixcfgsInputs ? ${requiredInput} || inputs ? ${requiredInput})
+                then throw "The ${type} configuration '${name}' did not specify '${requiredInput}' as part of their inputs."
+                else accum
+              )
             )
-          )
-          configurationArgs
-          configuration.requiredInputs or [ ]
+            configurationArgs
+            configuration.requiredInputs or [ ]
       )
       configurationsArgs)
     types;
