@@ -1,17 +1,12 @@
 {
   nixpkgs,
   nixcfg,
-}: {
-  name,
-  path,
-  inputs,
-  ...
-} @ rawArgs: let
+}: rawArgs: let
   inherit (builtins) catAttrs filter head listToAttrs mapAttrs match toJSON;
   inherit (nixpkgs.lib) foldr mapAttrs' nameValuePair recursiveUpdate;
   inherit (nixcfg.lib) applyAttrs concatAttrs defaultUpdateExtend extendsList listAttrs optionalInherit;
 
-  inherit (inputs) self;
+  inherit (rawArgs.inputs) self;
 
   mkChannels = inputs:
     import ./mkChannels.nix {
@@ -20,15 +15,17 @@
     }
     inputs;
 
-  nixcfgs = import ./mkNixcfgs.nix { inherit nixpkgs; } inputs;
+  systems = rawArgs.systems or [ "x86_64-linux" "aarch64-linux" ];
+
+  nixcfgs = import ./mkNixcfgs.nix { inherit nixpkgs; } rawArgs.inputs;
   nixcfgsInputs = concatAttrs (catAttrs "inputs" nixcfgs);
-  nixcfgsChannels = mkChannels nixcfgsInputs;
+  nixcfgsChannels = mkChannels systems nixcfgsInputs;
   nixcfgsLib = let
     channelName = rawArgs.lib.channelName or null;
     input =
       if channelName != null
       then
-        inputs.${channelName}
+        nixcfgsInputs.${channelName}
         or (throw "The lib nixpkgs channel '${channelName}' does not exist.")
       else nixpkgs;
   in
@@ -53,7 +50,7 @@
 
   mkNixosModules = import ./mkNixosModules.nix { inherit nixcfgs nixcfgsChannels nixpkgs self; };
 
-  listedArgs = listAttrs path ({
+  listedArgs = listAttrs rawArgs.path ({
       lib."overlay.nix" = "libOverlay";
       pkgs."overlay.nix" = "overlay";
       overlays = "overlays";
@@ -198,8 +195,9 @@
 
   applyArgs = mapAttrs (_: configurationsArgs:
     recursiveUpdate configurationsArgs (mapAttrs (name: configurationArgs: let
+        inherit (configurationArgs) system;
         inputs = removeAttrs rawArgs.inputs [ "self" ] // configurationArgs.inputs;
-        channels = recursiveUpdate nixcfgsChannels (mkChannels inputs);
+        channels = recursiveUpdate nixcfgsChannels.${system} (mkChannels [ system ] inputs).${system};
         pkgs = channels.${configurationArgs.channelName};
       in {
         inherit inputs name pkgs;
@@ -214,8 +212,9 @@
   types;
 in
   {
-    inherit inputs name nixcfgs;
-    outPath = path;
+    inherit (rawArgs) inputs name;
+    inherit nixcfgs;
+    outPath = rawArgs.path;
     lib = nixcfgsLib;
   }
   // mapAttrs' (name: nameValuePair "${name}ConfigurationsArgs") configurationsArgs

@@ -1,9 +1,9 @@
 {
   nixpkgs,
   channels,
-}: inputs: let
+}: systems: inputs: let
   inherit (builtins) mapAttrs;
-  inherit (nixpkgs.lib) filterAttrs hasPrefix optionalString;
+  inherit (nixpkgs.lib) filterAttrs genAttrs hasPrefix optionalString;
 
   channelInputs =
     filterAttrs (
@@ -70,4 +70,6 @@
     }
     // { inherit input; };
 in
-  mapAttrs (name: channel: importChannel (patchChannel name channel)) (getChannels "x86_64-linux")
+  genAttrs systems (system:
+    mapAttrs (name: channel:
+      importChannel (patchChannel name channel)) (getChannels system))
