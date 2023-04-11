@@ -8,15 +8,16 @@
   outputs = {
     self,
     nixpkgs,
-  }: {
+  }: let
+    nixcfg = self;
+  in {
     lib = import ./lib {
-      inherit nixpkgs;
-      nixcfg = self;
+      inherit nixcfg nixpkgs;
     };
+
     tests = let
       results = import ./test/lib {
-        inherit nixpkgs;
-        nixcfg = self;
+        inherit nixcfg nixpkgs;
       };
     in
       if results == [ ]
