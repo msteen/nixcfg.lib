@@ -15,7 +15,10 @@
     trace
     tryEval
     ;
-  inherit (nixpkgs.lib) runTests;
+  inherit
+    (nixpkgs.lib)
+    runTests
+    ;
   inherit
     (nixcfg.lib)
     applyAttrs

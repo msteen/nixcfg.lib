@@ -2,9 +2,24 @@
   nixpkgs,
   nixcfg,
 }: let
-  inherit (builtins) attrNames concatMap isAttrs listToAttrs readDir;
-  inherit (nixpkgs.lib) hasSuffix singleton;
-  inherit (nixcfg.lib) flattenInheritAttrs listNixTree;
+  inherit
+    (builtins)
+    attrNames
+    concatMap
+    isAttrs
+    listToAttrs
+    readDir
+    ;
+  inherit
+    (nixpkgs.lib)
+    hasSuffix
+    singleton
+    ;
+  inherit
+    (nixcfg.lib)
+    flattenInheritAttrs
+    listNixTree
+    ;
 
   nameToType = name:
     if hasSuffix ".nix" name

@@ -2,9 +2,37 @@
   nixpkgs,
   nixcfg,
 }: rawArgs: let
-  inherit (builtins) catAttrs concatLists elem filter head isList listToAttrs mapAttrs match toJSON;
-  inherit (nixpkgs.lib) foldr mapAttrs' mapAttrsToList nameValuePair recursiveUpdate singleton;
-  inherit (nixcfg.lib) applyAttrs concatAttrs defaultUpdateExtend extendsList listAttrs optionalInherit;
+  inherit
+    (builtins)
+    catAttrs
+    concatLists
+    elem
+    filter
+    head
+    isList
+    listToAttrs
+    mapAttrs
+    match
+    toJSON
+    ;
+  inherit
+    (nixpkgs.lib)
+    foldr
+    mapAttrs'
+    mapAttrsToList
+    nameValuePair
+    recursiveUpdate
+    singleton
+    ;
+  inherit
+    (nixcfg.lib)
+    applyAttrs
+    concatAttrs
+    defaultUpdateExtend
+    extendsList
+    listAttrs
+    optionalInherit
+    ;
 
   inherit (rawArgs.inputs) self;
 

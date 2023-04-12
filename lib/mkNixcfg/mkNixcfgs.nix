@@ -1,6 +1,16 @@
 { nixpkgs }: let
-  inherit (builtins) attrValues catAttrs concatLists;
-  inherit (nixpkgs.lib) filterAttrs hasPrefix unique;
+  inherit
+    (builtins)
+    attrValues
+    catAttrs
+    concatLists
+    ;
+  inherit
+    (nixpkgs.lib)
+    filterAttrs
+    hasPrefix
+    unique
+    ;
 in
   inputs: let
     inherit (inputs) self;

@@ -12,9 +12,27 @@
   modules,
   ...
 }: let
-  inherit (builtins) attrValues catAttrs concatMap concatStringsSep hashString mapAttrs substring;
-  inherit (nixpkgs.lib) mapAttrs' versionAtLeast;
-  inherit (pkgs.lib) mkDefault mkIf optional;
+  inherit
+    (builtins)
+    attrValues
+    catAttrs
+    concatMap
+    concatStringsSep
+    hashString
+    mapAttrs
+    substring
+    ;
+  inherit
+    (nixpkgs.lib)
+    mapAttrs'
+    versionAtLeast
+    ;
+  inherit
+    (pkgs.lib)
+    mkDefault
+    mkIf
+    optional
+    ;
 in
   concatMap attrValues (catAttrs "nixosModules" nixcfgs)
   ++ modules

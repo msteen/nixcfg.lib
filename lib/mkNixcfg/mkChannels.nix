@@ -2,8 +2,17 @@
   nixpkgs,
   channels,
 }: systems: inputs: let
-  inherit (builtins) mapAttrs;
-  inherit (nixpkgs.lib) filterAttrs genAttrs hasPrefix optionalString;
+  inherit
+    (builtins)
+    mapAttrs
+    ;
+  inherit
+    (nixpkgs.lib)
+    filterAttrs
+    genAttrs
+    hasPrefix
+    optionalString
+    ;
 
   channelInputs =
     filterAttrs (
