@@ -74,6 +74,23 @@
         "type": "github"
       }
     },
+    "nixcfg": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 0,
+        "narHash": "sha256-GMDf06sMD0zphBBQLX/VQSYwtyhsq2WLBdLQD0j24UU=",
+        "path": "../..",
+        "type": "path"
+      },
+      "original": {
+        "path": "../..",
+        "type": "path"
+      }
+    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1679318992,
@@ -95,6 +112,7 @@
         "extra-container": "extra-container",
         "flake-compat": "flake-compat",
         "home-manager": "home-manager",
+        "nixcfg": "nixcfg",
         "nixpkgs": "nixpkgs"
       }
     },

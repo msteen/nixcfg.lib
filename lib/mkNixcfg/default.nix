@@ -105,6 +105,7 @@
         name,
         inputs,
         system,
+        channels,
         pkgs,
         lib,
         ...
@@ -113,7 +114,11 @@
       in
         inputs.extra-container.lib.buildContainers {
           inherit system;
-          nixpkgs = pkgs.input;
+          # This potentially needs to be newer than the configured nixpkgs channel,
+          # due to `specialArgs` support being a very recent addition to NixOS containers.
+          # Rather than making it configurable seperately, we use the default behavior,
+          # of it defaulting to the nixpkgs input of `extra-container`.
+          # nixpkgs = pkgs.input;
           config.containers.${name} = mkMerge [
             {
               specialArgs = mkSpecialArgs args;
@@ -208,7 +213,7 @@
         channels = recursiveUpdate nixcfgsChannels.${system} (mkChannels [ system ] inputs).${system};
         pkgs = channels.${configurationArgs.channelName};
       in {
-        inherit inputs name pkgs;
+        inherit channels inputs name pkgs;
         inherit (pkgs) lib;
       })
       configurationsArgs))
