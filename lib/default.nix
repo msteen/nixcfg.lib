@@ -5,6 +5,7 @@
   inherit
     (builtins)
     attrNames
+    concatLists
     concatMap
     concatStringsSep
     elemAt
@@ -26,6 +27,7 @@
     flip
     hasPrefix
     hasSuffix
+    mapAttrsToList
     recursiveUpdate
     removeSuffix
     singleton
@@ -37,6 +39,10 @@ in rec {
 
   concatAttrs = foldl' (a: b: a // b) { };
   concatAttrsRecursive = foldl' (a: b: recursiveUpdate a b) { };
+
+  concatMapAttrsToList = f: attrs: concatLists (mapAttrsToList f attrs);
+
+  mapToAttrs = f: list: listToAttrs (map f list);
 
   optionalInherit = attrs: names:
     listToAttrs (concatMap (name:

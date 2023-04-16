@@ -4,15 +4,20 @@
 }: rawArgs: let
   inherit
     (builtins)
+    attrValues
     catAttrs
-    concatLists
+    concatMap
     elem
+    elemAt
     filter
+    groupBy
     head
     isList
+    isString
+    length
     listToAttrs
     mapAttrs
-    match
+    split
     toJSON
     ;
   inherit
@@ -28,9 +33,11 @@
     (nixcfg.lib)
     applyAttrs
     concatAttrs
+    concatMapAttrsToList
     defaultUpdateExtend
     extendsList
     listAttrs
+    mapToAttrs
     optionalInherit
     ;
 
@@ -48,6 +55,7 @@
   nixcfgs = import ./mkNixcfgs.nix { inherit nixpkgs; } rawArgs.inputs;
   nixcfgsInputs = concatAttrs (catAttrs "inputs" nixcfgs);
   nixcfgsChannels = mkChannels systems nixcfgsInputs;
+  nixcfgsModules = concatMap attrValues (catAttrs "nixosModules" nixcfgs);
   nixcfgsLib = let
     channelName = rawArgs.lib.channelName or null;
     input =
@@ -72,11 +80,13 @@
     {
       inherit inputs name;
       nixcfg = self;
-      nixcfgs = listToAttrs (map (nixcfg: nameValuePair nixcfg.name nixcfg) nixcfgs);
+      nixcfgs = mapToAttrs (nixcfg: nameValuePair nixcfg.name nixcfg) nixcfgs;
     }
     // moduleArgs;
 
-  mkNixosModules = import ./mkNixosModules.nix { inherit nixcfgs nixcfgsChannels nixpkgs self; };
+  mkNixosModules = import ./mkNixosModules.nix {
+    inherit nixcfgs nixcfgsChannels nixcfgsModules nixpkgs self;
+  };
 
   listedArgs = listAttrs rawArgs.path ({
       lib."overlay.nix" = "libOverlay";
@@ -102,6 +112,7 @@
   in {
     nixos = {
       default = _: default // { modules = [ ]; };
+
       extend = final: prev: name: {
         modules =
           prev.${name}.modules
@@ -111,14 +122,28 @@
               "The nixos configuration '${name}' is missing in 'nixos/configurations/'.")
           ];
       };
+
       apply = args: (import (args.pkgs.input + "/nixos/lib/eval-config.nix") {
         inherit (args) lib system;
         specialArgs = mkSpecialArgs args;
         modules = mkNixosModules args;
       });
     };
+
     container = {
       default = _: default // { modules = [ ]; };
+
+      fromListed = mapToAttrs ({
+        name,
+        nameParts,
+        ...
+      }: let
+        target = elemAt nameParts 1;
+      in
+        if length nameParts == 2 && elem target [ "container" "nixos" ]
+        then nameValuePair (head nameParts) { }
+        else throw "The container configuration '${name}' should be in the root of 'container/configs/<name>' as '{container,nixos}.nix' or '{container,nixos}/default.nix'.");
+
       extend = final: prev: name: {
         modules =
           prev.${name}.modules
@@ -128,7 +153,9 @@
               "The container configuration '${name}' is missing in 'container/configurations/'.")
           ];
       };
+
       requiredInputs = [ "extra-container" ];
+
       apply = {
         name,
         inputs,
@@ -158,14 +185,33 @@
           ];
         };
     };
+
     home = {
       default = _:
         default
         // {
-          users = _: {
+          users = username: {
+            homeDirectory = "/home/${username}";
             modules = [ ];
           };
         };
+
+      fromListed = listed:
+        mapAttrs (_: group: {
+          users = mapToAttrs ({ username, ... }: nameValuePair username { }) group;
+        }) (groupBy (x: x.name) (map ({
+          name,
+          nameParts,
+          ...
+        }:
+          if length nameParts == 2
+          then {
+            name = head nameParts;
+            username = elemAt nameParts 1;
+          }
+          else throw "The home configuration '${name}' should be in the root of 'home/configs/<name>' as '<username>.nix' or '<username>/default.nix'.")
+        listed));
+
       extend = final: prev: name: let
         nixosConfigurationArgs = configurationsArgs.nixos.${name};
         homeConfigurationArgs = prev.${name};
@@ -186,53 +232,83 @@
               ];
           };
         };
+
       requiredInputs = [ "home-manager" ];
-      # apply = {
-      #   inputs,
-      #   pkgs,
-      #   ...
-      # } @ args:
-      #   import (inputs.home-manager + "/modules") {
-      #     inherit pkgs;
-      #     extraSpecialArgs = mkSpecialArgs args;
-      #     check = true;
-      #   };
+
+      apply = {
+        name,
+        inputs,
+        pkgs,
+        stateVersion,
+        users,
+        ...
+      } @ args:
+        mapAttrsToList (username: {
+          homeDirectory,
+          modules,
+        }:
+          nameValuePair "${name}_${username}" (inputs.home-manager.lib.homeManagerConfiguration {
+            inherit pkgs;
+            extraSpecialArgs = mkSpecialArgs args;
+            check = true;
+            modules =
+              nixcfgsModules
+              ++ modules
+              ++ singleton
+              {
+                home = { inherit homeDirectory stateVersion username; };
+                programs.home-manager.enable = true;
+              };
+          }))
+        users;
     };
   };
 
-  configurationsArgs = let
-    firstName = name: head (match "^([[:alnum:]]+).*" name);
+  configurationsArgs = mapAttrs (type: configuration: let
+    defaultFromListed = listed:
+      mapToAttrs ({
+        name,
+        nameParts,
+        ...
+      }:
+        if length nameParts == 1
+        then nameValuePair (head nameParts) { }
+        else throw "The ${type} configuration '${name}' should be in the root of '${type}/configurations/' as '${name}.nix' or '${name}/default.nix'.")
+      listed;
+
+    configurationsArgs =
+      defaultUpdateExtend
+      configuration.default or { }
+      ((configuration.fromListed or defaultFromListed) (mapAttrsToList (name: path: {
+          inherit name path;
+          nameParts = filter (x: isString x && x != "") (split "_" name);
+        })
+        listedArgs."${type}Configurations")
+      // rawArgs."${type}Configurations" or { })
+      configuration.extend or (_: _: { });
   in
-    mapAttrs (type: configuration: let
-      configurationsArgs =
-        defaultUpdateExtend
-        configuration.default or { }
-        (mapAttrs' (name: _: nameValuePair (firstName name) { }) listedArgs."${type}Configurations"
-          // rawArgs."${type}Configurations" or { })
-        configuration.extend or (_: _: { });
-    in
-      mapAttrs (
-        name: {
-          inputs,
-          system,
-          channelName,
-          ...
-        } @ configurationArgs:
-          if !(elem system systems)
-          then throw "The ${type} configuration '${name}' has system '${system}', which is not listed in the supported systems."
-          else
-            foldr (
-              requiredInput: accum: (
-                if !(nixcfgsInputs ? ${requiredInput} || inputs ? ${requiredInput})
-                then throw "The ${type} configuration '${name}' did not specify '${requiredInput}' as part of their inputs."
-                else accum
-              )
+    mapAttrs (
+      name: {
+        inputs,
+        system,
+        channelName,
+        ...
+      } @ configurationArgs:
+        if !(elem system systems)
+        then throw "The ${type} configuration '${name}' has system '${system}', which is not listed in the supported systems."
+        else
+          foldr (
+            requiredInput: accum: (
+              if !(nixcfgsInputs ? ${requiredInput} || inputs ? ${requiredInput})
+              then throw "The ${type} configuration '${name}' did not specify '${requiredInput}' as part of their inputs."
+              else accum
             )
-            configurationArgs
-            configuration.requiredInputs or [ ]
-      )
-      configurationsArgs)
-    types;
+          )
+          configurationArgs
+          configuration.requiredInputs or [ ]
+    )
+    configurationsArgs)
+  types;
 
   applyArgs = mapAttrs (_: configurationsArgs:
     recursiveUpdate configurationsArgs (mapAttrs (name: configurationArgs: let
@@ -250,13 +326,13 @@
   configurations =
     mapAttrs (
       name: type:
-        listToAttrs (concatLists (mapAttrsToList (name: args: let
+        listToAttrs (concatMapAttrsToList (name: args: let
           value = type.apply or (_: [ ]) args;
         in
           if !(isList value)
           then singleton (nameValuePair name value)
           else value)
-        applyArgs.${name}))
+        applyArgs.${name})
     )
     types;
 in

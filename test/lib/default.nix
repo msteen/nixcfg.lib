@@ -456,6 +456,22 @@
         fails self.nixosConfigurationsArgs.ubuntu;
       expected = true;
     };
+
+    testHomeConfigurations = {
+      expr = let
+        self = mkNixcfg {
+          name = "example";
+          path = ./nixcfg;
+          inputs =
+            inputs
+            // {
+              inherit self;
+            };
+        };
+      in
+        self.homeConfigurations.ubuntu_matthijs ? activationPackage;
+      expected = true;
+    };
   };
 in
   runTests tests
