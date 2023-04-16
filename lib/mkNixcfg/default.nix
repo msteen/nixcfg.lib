@@ -118,8 +118,7 @@
           prev.${name}.modules
           ++ [
             listedArgs.nixosConfigurations.${name}
-            or (throw
-              "The nixos configuration '${name}' is missing in 'nixos/configurations/'.")
+            or (throw "The nixos configuration '${name}' is missing in 'nixos/configs/'.")
           ];
       };
 
@@ -149,8 +148,7 @@
           prev.${name}.modules
           ++ [
             listedArgs.containerConfigurations."${name}_nixos"
-            or (throw
-              "The container configuration '${name}' is missing in 'container/configurations/'.")
+            or (throw "The container configuration '${name}' is missing in 'container/configs/'.")
           ];
       };
 
@@ -227,8 +225,7 @@
               prev.${name}.users.${username}.modules
               ++ [
                 listedArgs.homeConfigurations."${name}_${username}"
-                or (throw
-                  "The home configuration '${name}' is missing a user configuration for '${username}' in 'home/configurations/${name}/'.")
+                or (throw "The home configuration '${name}' is missing a user configuration for '${username}' in 'home/configs/${name}/'.")
               ];
           };
         };
@@ -273,7 +270,7 @@
       }:
         if length nameParts == 1
         then nameValuePair (head nameParts) { }
-        else throw "The ${type} configuration '${name}' should be in the root of '${type}/configurations/' as '${name}.nix' or '${name}/default.nix'.")
+        else throw "The ${type} configuration '${name}' should be in the root of '${type}/configs/' as '${name}.nix' or '${name}/default.nix'.")
       listed;
 
     configurationsArgs =
