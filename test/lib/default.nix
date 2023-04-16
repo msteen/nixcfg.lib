@@ -375,7 +375,7 @@
           };
         };
       in
-        self.nixosConfigurations.ubuntu.config.system.build ? toplevel;
+        self.nixosConfigurations.x86_64-linux.ubuntu.config.system.build ? toplevel;
       expected = true;
     };
 
@@ -395,7 +395,7 @@
           nixosConfigurations.ubuntu.channelName = "nixpkgs2";
         };
       in
-        self.nixosConfigurations.ubuntu.pkgs ? overlay2;
+        self.nixosConfigurations.x86_64-linux.ubuntu.pkgs ? overlay2;
       expected = true;
     };
 
@@ -413,7 +413,7 @@
           };
         };
       in
-        fails self.nixosConfigurations.ubuntu.pkgs.vscode.outPath;
+        fails self.nixosConfigurations.x86_64-linux.ubuntu.pkgs.vscode.outPath;
       expected = true;
     };
 
@@ -469,7 +469,7 @@
             };
         };
       in
-        self.homeConfigurations.ubuntu_matthijs ? activationPackage;
+        self.homeConfigurations.x86_64-linux.ubuntu_matthijs ? activationPackage;
       expected = true;
     };
   };

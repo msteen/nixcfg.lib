@@ -335,6 +335,14 @@
         applyArgs.${name})
     )
     types;
+
+  systemConfigurations = mapAttrs (type: configurations:
+    mapAttrs (_: listToAttrs) (groupBy (x:
+      x.value.system
+      or x.value.pkgs.system
+      or (throw "The ${type} configuration is missing a system or pkgs attribute."))
+    (mapAttrsToList nameValuePair configurations)))
+  configurations;
 in
   {
     inherit (rawArgs) inputs name;
@@ -343,5 +351,5 @@ in
     lib = nixcfgsLib;
   }
   // mapAttrs' (name: nameValuePair "${name}ConfigurationsArgs") configurationsArgs
-  // mapAttrs' (name: nameValuePair "${name}Configurations") configurations
+  // mapAttrs' (name: nameValuePair "${name}Configurations") systemConfigurations
   // mapAttrs (_: import) (optionalInherit listedArgs [ "libOverlay" "overlay" ])
