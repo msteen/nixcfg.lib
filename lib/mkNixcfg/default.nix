@@ -323,23 +323,19 @@
   configurations =
     mapAttrs (
       name: type:
-        listToAttrs (concatMapAttrsToList (name: args: let
-          value = type.apply or (_: [ ]) args;
-        in
-          if !(isList value)
-          then singleton (nameValuePair name value)
-          else value)
-        applyArgs.${name})
+        mapAttrs (_: listToAttrs) (groupBy (x:
+            x.value.system
+            or x.value.pkgs.system
+            or (throw "The ${type} configuration is missing a system or pkgs attribute."))
+          (concatMapAttrsToList (name: args: let
+            value = type.apply or (_: [ ]) args;
+          in
+            if !(isList value)
+            then singleton (nameValuePair name value)
+            else value)
+          applyArgs.${name}))
     )
     types;
-
-  systemConfigurations = mapAttrs (type: configurations:
-    mapAttrs (_: listToAttrs) (groupBy (x:
-      x.value.system
-      or x.value.pkgs.system
-      or (throw "The ${type} configuration is missing a system or pkgs attribute."))
-    (mapAttrsToList nameValuePair configurations)))
-  configurations;
 in
   {
     inherit (rawArgs) inputs name;
@@ -348,5 +344,5 @@ in
     lib = nixcfgsLib;
   }
   // mapAttrs' (name: nameValuePair "${name}ConfigurationsArgs") configurationsArgs
-  // mapAttrs' (name: nameValuePair "${name}Configurations") systemConfigurations
+  // mapAttrs' (name: nameValuePair "${name}Configurations") configurations
   // mapAttrs (_: import) (optionalInherit listedArgs [ "libOverlay" "overlay" ])
