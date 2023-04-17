@@ -13,6 +13,7 @@
     filter
     groupBy
     head
+    isAttrs
     isList
     isString
     length
@@ -54,7 +55,8 @@
 
   systems = rawArgs.systems or [ "x86_64-linux" "aarch64-linux" ];
 
-  nixcfgs = import ./mkNixcfgs.nix { inherit nixpkgs; } rawArgs.inputs;
+  nixcfgsData = import ./mkNixcfgs.nix { inherit nixcfg nixpkgs; } rawArgs.inputs;
+  nixcfgs = nixcfgsData.list;
   nixcfgsInputs = concatAttrs (catAttrs "inputs" nixcfgs);
   nixcfgsChannels = mkChannels systems nixcfgsInputs;
   nixcfgsLib = let
@@ -81,7 +83,7 @@
     {
       inherit inputs name;
       nixcfg = self;
-      nixcfgs = mapToAttrs (nixcfg: nameValuePair nixcfg.name nixcfg) nixcfgs;
+      nixcfgs = nixcfgsData.attrs;
     }
     // moduleArgs;
 
