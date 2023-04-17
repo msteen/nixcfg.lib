@@ -322,18 +322,18 @@
 
   configurations =
     mapAttrs (
-      name: type:
+      type: { apply ? (_: [ ]), ... }:
         mapAttrs (_: listToAttrs) (groupBy (x:
             x.value.system
             or x.value.pkgs.system
             or (throw "The ${type} configuration is missing a system or pkgs attribute."))
           (concatMapAttrsToList (name: args: let
-            value = type.apply or (_: [ ]) args;
+            value = apply args;
           in
             if !(isList value)
             then singleton (nameValuePair name value)
             else value)
-          applyArgs.${name}))
+          applyArgs.${type}))
     )
     types;
 in
