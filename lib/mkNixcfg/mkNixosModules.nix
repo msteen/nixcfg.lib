@@ -2,6 +2,7 @@
   nixpkgs,
   self,
   nixcfgs,
+  nixcfgsInputs,
   nixcfgsChannels,
   homeApplyArgs,
   mkSpecialArgs,
@@ -41,7 +42,7 @@ in
   ++ optionals (homeApplyArgs ? ${name}) (let
     homeArgs = homeApplyArgs.${name};
   in [
-    inputs.home-manager.nixosModules.home-manager
+    (homeArgs.inputs.home-manager or nixcfgsInputs.home-manager).nixosModules.home-manager
     {
       home-manager = {
         useGlobalPkgs = true;

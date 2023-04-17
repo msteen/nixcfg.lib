@@ -90,7 +90,7 @@
   };
 
   mkNixosModules = import ./mkNixosModules.nix {
-    inherit mkHomeModules mkSpecialArgs nixcfgs nixcfgsChannels nixpkgs self;
+    inherit mkHomeModules mkSpecialArgs nixcfgs nixcfgsChannels nixcfgsInputs nixpkgs self;
     homeApplyArgs = applyArgs.home;
   };
 
@@ -173,7 +173,7 @@
       } @ args: let
         inherit (lib) mkMerge;
       in
-        inputs.extra-container.lib.buildContainers {
+        (inputs.extra-container or nixcfgsInputs.extra-container).lib.buildContainers {
           inherit system;
           # This potentially needs to be newer than the configured nixpkgs channel,
           # due to `specialArgs` support being a very recent addition to NixOS containers.
@@ -252,7 +252,7 @@
         ...
       } @ args:
         mapAttrsToList (username: user:
-          nameValuePair "${name}_${username}" (inputs.home-manager.lib.homeManagerConfiguration {
+          nameValuePair "${name}_${username}" ((inputs.home-manager or nixcfgsInputs.home-manager).lib.homeManagerConfiguration {
             inherit pkgs;
             extraSpecialArgs = mkSpecialArgs args;
             modules = mkHomeModules args username user;
@@ -297,7 +297,7 @@
         else
           foldr (
             requiredInput: accum: (
-              if !(nixcfgsInputs ? ${requiredInput} || inputs ? ${requiredInput})
+              if !(inputs ? ${requiredInput} || nixcfgsInputs ? ${requiredInput})
               then throw "The ${type} configuration '${name}' did not specify '${requiredInput}' as part of their inputs."
               else accum
             )
