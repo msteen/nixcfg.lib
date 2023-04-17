@@ -3,6 +3,9 @@
   self,
   nixcfgs,
   nixcfgsChannels,
+  homeApplyArgs,
+  mkSpecialArgs,
+  mkHomeModules,
 }: {
   name,
   inputs,
@@ -31,11 +34,24 @@
     mkDefault
     mkIf
     optional
+    optionals
     ;
 in
   modules
-  ++ singleton
-  ({ config, ... }: {
+  ++ optionals (homeApplyArgs ? ${name}) (let
+    homeArgs = homeApplyArgs.${name};
+  in [
+    inputs.home-manager.nixosModules.home-manager
+    {
+      home-manager = {
+        useGlobalPkgs = true;
+        useUserPackages = true;
+        extraSpecialArgs = mkSpecialArgs homeArgs;
+        users = mapAttrs (mkHomeModules homeArgs) homeArgs.users;
+      };
+    }
+  ])
+  ++ singleton ({ config, ... }: {
     nix.extraOptions = "extra-experimental-features = ${concatStringsSep " "
       ([ "nix-command" "flakes" ] ++ optional (!versionAtLeast config.nix.package.version "2.5pre") "ca-references")}";
 

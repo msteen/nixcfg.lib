@@ -83,8 +83,13 @@
     }
     // moduleArgs;
 
+  mkHomeModules = import ./mkHomeModules.nix {
+    inherit nixcfgs nixpkgs;
+  };
+
   mkNixosModules = import ./mkNixosModules.nix {
-    inherit nixcfgs nixcfgsChannels nixpkgs self;
+    inherit mkHomeModules mkSpecialArgs nixcfgs nixcfgsChannels nixpkgs self;
+    homeApplyArgs = applyArgs.home;
   };
 
   listedArgs = listAttrs rawArgs.path ({
@@ -244,22 +249,12 @@
         users,
         ...
       } @ args:
-        mapAttrsToList (username: {
-          homeDirectory,
-          modules,
-        }:
+        mapAttrsToList (username: user:
           nameValuePair "${name}_${username}" (inputs.home-manager.lib.homeManagerConfiguration {
             inherit pkgs;
             extraSpecialArgs = mkSpecialArgs args;
+            modules = mkHomeModules args username user;
             check = true;
-            modules =
-              concatMap attrValues (catAttrs "homeModules" nixcfgs)
-              ++ modules
-              ++ singleton
-              {
-                home = { inherit homeDirectory stateVersion username; };
-                programs.home-manager.enable = true;
-              };
           }))
         users;
     };
