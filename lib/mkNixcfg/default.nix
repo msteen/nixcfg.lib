@@ -343,6 +343,7 @@ in
     inherit nixcfgs;
     outPath = rawArgs.path;
     lib = nixcfgsLib;
+    # Nixpkgs overlays are required to be overlay functions, paths are not allowed.
     overlays = mapAttrs (_: import) listedArgs.overlays;
   }
   // mapAttrs (_: import) (optionalInherit listedArgs [ "libOverlay" "overlay" ])
