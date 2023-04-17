@@ -345,10 +345,12 @@ in
     inherit nixcfgs;
     outPath = rawArgs.path;
     lib = nixcfgsLib;
-    # Nixpkgs overlays are required to be overlay functions, paths are not allowed.
-    overlays = mapAttrs (_: import) listedArgs.overlays;
   }
-  // mapAttrs (_: import) (optionalInherit listedArgs [ "libOverlay" "overlay" ])
+  # Nixpkgs overlays are required to be overlay functions, paths are not allowed.
+  // mapAttrs (_: x:
+    if isAttrs x
+    then mapAttrs (_: import) x
+    else import x) (optionalInherit listedArgs [ "libOverlay" "overlay" "overlays" ])
   // getAttrs (concatMap (type: [ "${type}Modules" "${type}Profiles" ]) (attrNames types)) listedArgs
   // mapAttrs' (type: nameValuePair "${type}ConfigurationsArgs") configurationsArgs
   // mapAttrs' (type: nameValuePair "${type}Configurations") configurations
