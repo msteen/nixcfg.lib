@@ -18,7 +18,9 @@
 }: let
   inherit
     (builtins)
+    attrValues
     catAttrs
+    concatMap
     concatStringsSep
     hashString
     mapAttrs
@@ -38,7 +40,8 @@
     optionals
     ;
 in
-  modules
+  concatMap attrValues (catAttrs "nixosModules" nixcfgs)
+  ++ modules
   ++ optionals (homeApplyArgs ? ${name}) (let
     homeArgs = homeApplyArgs.${name};
   in [

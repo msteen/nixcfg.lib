@@ -133,9 +133,7 @@
       apply = args: (import (args.pkgs.input + "/nixos/lib/eval-config.nix") {
         inherit (args) lib system;
         specialArgs = mkSpecialArgs args;
-        modules =
-          concatMap attrValues (catAttrs "nixosModules" nixcfgs)
-          ++ mkNixosModules args;
+        modules = mkNixosModules args;
       });
     };
 
@@ -187,8 +185,7 @@
               specialArgs = mkSpecialArgs args;
               config = {
                 imports =
-                  concatMap attrValues (catAttrs "nixosModules" nixcfgs)
-                  ++ concatMap attrValues (catAttrs "containerModules" nixcfgs)
+                  concatMap attrValues (catAttrs "containerModules" nixcfgs)
                   ++ mkNixosModules args;
               };
             }
