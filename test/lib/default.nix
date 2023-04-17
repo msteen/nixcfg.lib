@@ -393,6 +393,7 @@
             overlays = [ (final: prev: { overlay2 = true; }) ];
           };
           nixosConfigurations.ubuntu.channelName = "nixpkgs2";
+          homeConfigurations.ubuntu.channelName = "nixpkgs2";
         };
       in
         self.nixosConfigurations.x86_64-linux.ubuntu.pkgs ? overlay2;
