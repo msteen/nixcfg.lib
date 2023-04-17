@@ -4,6 +4,7 @@
 }: rawArgs: let
   inherit
     (builtins)
+    attrNames
     attrValues
     catAttrs
     concatMap
@@ -23,6 +24,7 @@
   inherit
     (nixpkgs.lib)
     foldr
+    getAttrs
     mapAttrs'
     mapAttrsToList
     nameValuePair
@@ -341,7 +343,9 @@ in
     inherit nixcfgs;
     outPath = rawArgs.path;
     lib = nixcfgsLib;
+    overlays = mapAttrs (_: import) listedArgs.overlays;
   }
-  // mapAttrs' (name: nameValuePair "${name}ConfigurationsArgs") configurationsArgs
-  // mapAttrs' (name: nameValuePair "${name}Configurations") configurations
   // mapAttrs (_: import) (optionalInherit listedArgs [ "libOverlay" "overlay" ])
+  // getAttrs (concatMap (type: [ "${type}Modules" "${type}Profiles" ]) (attrNames types)) listedArgs
+  // mapAttrs' (type: nameValuePair "${type}ConfigurationsArgs") configurationsArgs
+  // mapAttrs' (type: nameValuePair "${type}Configurations") configurations
