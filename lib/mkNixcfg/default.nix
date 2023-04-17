@@ -55,7 +55,6 @@
   nixcfgs = import ./mkNixcfgs.nix { inherit nixpkgs; } rawArgs.inputs;
   nixcfgsInputs = concatAttrs (catAttrs "inputs" nixcfgs);
   nixcfgsChannels = mkChannels systems nixcfgsInputs;
-  nixcfgsModules = concatMap attrValues (catAttrs "nixosModules" nixcfgs);
   nixcfgsLib = let
     channelName = rawArgs.lib.channelName or null;
     input =
@@ -85,7 +84,7 @@
     // moduleArgs;
 
   mkNixosModules = import ./mkNixosModules.nix {
-    inherit nixcfgs nixcfgsChannels nixcfgsModules nixpkgs self;
+    inherit nixcfgs nixcfgsChannels nixpkgs self;
   };
 
   listedArgs = listAttrs rawArgs.path ({
@@ -125,7 +124,9 @@
       apply = args: (import (args.pkgs.input + "/nixos/lib/eval-config.nix") {
         inherit (args) lib system;
         specialArgs = mkSpecialArgs args;
-        modules = mkNixosModules args;
+        modules =
+          concatMap attrValues (catAttrs "nixosModules" nixcfgs)
+          ++ mkNixosModules args;
       });
     };
 
@@ -176,7 +177,10 @@
             {
               specialArgs = mkSpecialArgs args;
               config = {
-                imports = mkNixosModules args;
+                imports =
+                  concatMap attrValues (catAttrs "nixosModules" nixcfgs)
+                  ++ concatMap attrValues (catAttrs "containerModules" nixcfgs)
+                  ++ mkNixosModules args;
               };
             }
             listedArgs.containerConfigurations."${name}_container" or { }
@@ -249,7 +253,7 @@
             extraSpecialArgs = mkSpecialArgs args;
             check = true;
             modules =
-              nixcfgsModules
+              concatMap attrValues (catAttrs "homeModules" nixcfgs)
               ++ modules
               ++ singleton
               {

@@ -3,7 +3,6 @@
   self,
   nixcfgs,
   nixcfgsChannels,
-  nixcfgsModules,
 }: {
   name,
   inputs,
@@ -34,8 +33,7 @@
     optional
     ;
 in
-  nixcfgsModules
-  ++ modules
+  modules
   ++ singleton
   ({ config, ... }: {
     nix.extraOptions = "extra-experimental-features = ${concatStringsSep " "
