@@ -8,21 +8,9 @@
     ;
   inherit
     (nixpkgs.lib)
-    filterAttrs
     genAttrs
-    hasPrefix
     optionalString
     ;
-
-  channelInputs =
-    filterAttrs (
-      name: _:
-        name
-        == "nixpkgs"
-        || hasPrefix "nixos-" name
-        || hasPrefix "release-" name
-    )
-    inputs;
 
   # Skip impure.nix: ${input} -> ${input}/pkgs/top-level/impure.nix -> ${input}/pkgs/top-level
   importNixpkgs = {
@@ -55,11 +43,11 @@
       };
 
   getChannels = system:
-    mapAttrs (_: input: { inherit input system; }) channelInputs
+    mapAttrs (_: input: { inherit input system; }) inputs
     // mapAttrs (
       name: {
         input ?
-          channelInputs.${name}
+          inputs.${name}
           or (throw "Channel '${name}' is missing the required input attribute or does not have it implicit through inputs."),
         ...
       } @ channel:
@@ -74,10 +62,10 @@
     overlays ? [ ],
   }:
     importNixpkgs {
-      inherit input overlays system;
+      inherit input system;
       config = { allowUnfree = true; } // config;
-    }
-    // { inherit input; };
+      overlays = overlays ++ [ (final: prev: { inherit input; }) ];
+    };
 in
   genAttrs systems (system:
     mapAttrs (name: channel:

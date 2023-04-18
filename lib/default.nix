@@ -44,6 +44,14 @@ in rec {
 
   mapToAttrs = f: list: listToAttrs (map f list);
 
+  maximum = compare: list:
+    foldl' (a: b:
+      if a == null || compare a b < 1
+      then b
+      else a)
+    null
+    list;
+
   optionalInherit = attrs: names:
     listToAttrs (concatMap (name:
       if attrs ? ${name}

@@ -7,6 +7,7 @@
     attrNames
     attrValues
     catAttrs
+    compareVersions
     concatMap
     elem
     elemAt
@@ -20,15 +21,19 @@
     listToAttrs
     mapAttrs
     split
+    splitVersion
     toJSON
     ;
   inherit
     (nixpkgs.lib)
+    filterAttrs
     foldr
     getAttrs
+    hasPrefix
     mapAttrs'
     mapAttrsToList
     nameValuePair
+    optionalAttrs
     recursiveUpdate
     singleton
     ;
@@ -41,10 +46,28 @@
     extendsList
     listAttrs
     mapToAttrs
+    maximum
     optionalInherit
     ;
 
   inherit (rawArgs.inputs) self;
+
+  filterNixpkgsInputs = filterAttrs (
+    name: _:
+      elem name [ "nixpkgs" "nixpkgs-unstable" ]
+      || hasPrefix "nixos-" name
+      || hasPrefix "release-" name
+  );
+
+  withDefaultNixpkgs = nixpkgsAttrs: hasNixpkgs: fallbackNixpkgs: let
+    latestNixpkgs =
+      mapAttrs (_: names: nixpkgsAttrs.${maximum compareVersions names})
+      (groupBy (name: head (splitVersion name)) (attrNames nixpkgsAttrs));
+  in
+    nixpkgsAttrs
+    // optionalAttrs (!hasNixpkgs) {
+      nixpkgs = latestNixpkgs.nixos or latestNixpkgs.release or fallbackNixpkgs;
+    };
 
   mkChannels = inputs:
     import ./mkChannels.nix {
@@ -58,15 +81,13 @@
   nixcfgsData = import ./mkNixcfgs.nix { inherit nixcfg nixpkgs; } rawArgs.inputs;
   nixcfgs = nixcfgsData.list;
   nixcfgsInputs = concatAttrs (catAttrs "inputs" nixcfgs);
-  nixcfgsChannels = mkChannels systems nixcfgsInputs;
+  nixcfgsNixpkgsInputs = withDefaultNixpkgs (filterNixpkgsInputs nixcfgsInputs) (nixcfgsInputs ? nixpkgs) nixpkgs;
+  nixcfgsChannels = mkChannels systems nixcfgsNixpkgsInputs;
   nixcfgsLib = let
-    channelName = rawArgs.lib.channelName or null;
+    channelName = rawArgs.lib.channelName or "nixpkgs";
     input =
-      if channelName != null
-      then
-        nixcfgsInputs.${channelName}
-        or (throw "The lib nixpkgs channel '${channelName}' does not exist.")
-      else nixpkgs;
+      nixcfgsNixpkgsInputs.${channelName}
+      or (throw "The lib nixpkgs channel '${channelName}' does not exist.");
   in
     extendsList (catAttrs "libOverlay" nixcfgs) (final:
       nixcfg.lib
@@ -309,16 +330,25 @@
     configurationsArgs)
   types;
 
-  applyArgs = mapAttrs (_: configurationsArgs:
-    recursiveUpdate configurationsArgs (mapAttrs (name: configurationArgs: let
-        inherit (configurationArgs) system;
-        inputs = removeAttrs rawArgs.inputs [ "self" ] // configurationArgs.inputs;
-        channels = recursiveUpdate nixcfgsChannels.${system} (mkChannels [ system ] inputs).${system};
-        pkgs = channels.${configurationArgs.channelName};
-      in {
-        inherit channels inputs name pkgs;
-        inherit (pkgs) lib;
-      })
+  applyArgs = mapAttrs (type: configurationsArgs:
+    recursiveUpdate configurationsArgs (mapAttrs (
+        name: {
+          system,
+          channelName,
+          ...
+        } @ configurationArgs: let
+          inputs = removeAttrs rawArgs.inputs [ "self" ] // configurationArgs.inputs;
+          channels =
+            withDefaultNixpkgs
+            (recursiveUpdate nixcfgsChannels.${system} (mkChannels [ system ] (filterNixpkgsInputs inputs)).${system})
+            (nixcfgsInputs ? nixpkgs || inputs ? nixpkgs)
+            (mkChannels [ system ] { inherit nixpkgs; }).${system}.nixpkgs;
+          pkgs = channels.${channelName} or (throw "The ${type} nixpkgs channel '${channelName}' does not exist.");
+        in {
+          inherit channels inputs name pkgs;
+          inherit (pkgs) lib;
+        }
+      )
       configurationsArgs))
   configurationsArgs;
 

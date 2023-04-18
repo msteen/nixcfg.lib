@@ -473,6 +473,38 @@
         self.homeConfigurations.x86_64-linux.ubuntu_matthijs ? activationPackage;
       expected = true;
     };
+
+    testDefaultNixpkgs_1 = {
+      expr = let
+        self = mkNixcfg {
+          name = "example";
+          path = ./nixcfg;
+          inputs = {
+            inherit self;
+            inherit (inputs) home-manager;
+          };
+        };
+      in
+        self.homeConfigurations.x86_64-linux.ubuntu_matthijs.pkgs.input.outPath == nixpkgs.outPath;
+      expected = true;
+    };
+
+    testDefaultNixpkgs_2 = {
+      expr = let
+        nixos-22_11 = inputs.nixos-unstable;
+        self = mkNixcfg {
+          name = "example";
+          path = ./nixcfg;
+          inputs = {
+            inherit nixos-22_11 self;
+            inherit (inputs) home-manager;
+          };
+        };
+        nixpkgsOutPath = self.homeConfigurations.x86_64-linux.ubuntu_matthijs.pkgs.input.outPath;
+      in
+        nixpkgsOutPath == nixos-22_11.outPath && nixpkgsOutPath != nixpkgs.outPath;
+      expected = true;
+    };
   };
 in
   runTests tests
