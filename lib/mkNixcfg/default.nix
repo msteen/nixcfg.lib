@@ -14,6 +14,7 @@
     filter
     groupBy
     head
+    intersectAttrs
     isAttrs
     isList
     isString
@@ -284,51 +285,57 @@
     };
   };
 
-  configurationsArgs = mapAttrs (type: configuration: let
-    defaultFromListed = listed:
-      mapToAttrs ({
-        name,
-        nameParts,
-        ...
-      }:
-        if length nameParts == 1
-        then nameValuePair (head nameParts) { }
-        else throw "The ${type} configuration '${name}' should be in the root of '${type}/configs/' as '${name}.nix' or '${name}/default.nix'.")
-      listed;
+  configurationsArgs = let
+    configurationsArgs = mapAttrs (type: configuration: let
+      configurationsArgs =
+        defaultUpdateExtend
+        configuration.default or { }
+        ((configuration.fromListed or defaultFromListed) (mapAttrsToList (name: path: {
+            inherit name path;
+            nameParts = filter (x: isString x && x != "") (split "_" name);
+          })
+          listedArgs."${type}Configurations")
+        // rawArgs."${type}Configurations" or { })
+        configuration.extend or (_: _: { });
 
-    configurationsArgs =
-      defaultUpdateExtend
-      configuration.default or { }
-      ((configuration.fromListed or defaultFromListed) (mapAttrsToList (name: path: {
-          inherit name path;
-          nameParts = filter (x: isString x && x != "") (split "_" name);
-        })
-        listedArgs."${type}Configurations")
-      // rawArgs."${type}Configurations" or { })
-      configuration.extend or (_: _: { });
-  in
-    mapAttrs (
-      name: {
-        inputs,
-        system,
-        channelName,
-        ...
-      } @ configurationArgs:
-        if !(elem system systems)
-        then throw "The ${type} configuration '${name}' has system '${system}', which is not listed in the supported systems."
-        else
-          foldr (
-            requiredInput: accum: (
-              if !(inputs ? ${requiredInput} || nixcfgsInputs ? ${requiredInput})
-              then throw "The ${type} configuration '${name}' did not specify '${requiredInput}' as part of their inputs."
-              else accum
+      defaultFromListed = listed:
+        mapToAttrs ({
+          name,
+          nameParts,
+          ...
+        }:
+          if length nameParts == 1
+          then nameValuePair (head nameParts) { }
+          else throw "The ${type} configuration '${name}' should be in the root of '${type}/configs/' as '${name}.nix' or '${name}/default.nix'.")
+        listed;
+    in
+      mapAttrs (
+        name: {
+          inputs,
+          system,
+          channelName,
+          ...
+        } @ configurationArgs:
+          if !(elem system systems)
+          then throw "The ${type} configuration '${name}' has system '${system}', which is not listed in the supported systems."
+          else
+            foldr (
+              requiredInput: accum: (
+                if !(inputs ? ${requiredInput} || nixcfgsInputs ? ${requiredInput})
+                then throw "The ${type} configuration '${name}' did not specify '${requiredInput}' as part of their inputs."
+                else accum
+              )
             )
-          )
-          configurationArgs
-          configuration.requiredInputs or [ ]
-    )
-    configurationsArgs)
-  types;
+            configurationArgs
+            configuration.requiredInputs or [ ]
+      )
+      configurationsArgs)
+    types;
+  in (
+    if intersectAttrs configurationsArgs.nixos configurationsArgs.container != { }
+    then throw "The names of nixos and container configurations are not allowed to overlap. This would make it ambiguous to which a home configuration should be added."
+    else configurationsArgs
+  );
 
   applyArgs = mapAttrs (type: configurationsArgs:
     recursiveUpdate configurationsArgs (mapAttrs (

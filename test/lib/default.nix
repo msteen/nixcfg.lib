@@ -505,6 +505,23 @@
         nixpkgsOutPath == nixos-22_11.outPath && nixpkgsOutPath != nixpkgs.outPath;
       expected = true;
     };
+
+    testNixosContainerNoOverlap = {
+      expr = let
+        self = mkNixcfg {
+          name = "example";
+          path = ./nixcfg;
+          inputs =
+            inputs
+            // {
+              inherit self;
+            };
+          nixosConfigurations.hello = { };
+        };
+      in
+        fails self.nixosConfigurationsArgs.hello;
+      expected = true;
+    };
   };
 in
   runTests tests
