@@ -88,9 +88,8 @@ in
     nixpkgs.pkgs = mkDefault pkgs;
     nixpkgs.overlays = [ (final: prev: channels) ] ++ catAttrs "overlay" nixcfgs;
 
-    system.configurationRevision = mkIf (self ? rev) self.rev;
-    system.stateVersion = stateVersion;
-
     system.nixos.revision = mkDefault config.system.configurationRevision;
-    system.nixos.versionSuffix = mkDefault pkgs.lib.trivial.versionSuffix;
+    system.nixos.versionSuffix = mkDefault ".${substring 0 8 (self.lastModifiedDate or "19700101")}.${self.shortRev or "dirty"}";
+    system.stateVersion = stateVersion;
+    system.configurationRevision = mkIf (self ? rev) self.rev;
   })
