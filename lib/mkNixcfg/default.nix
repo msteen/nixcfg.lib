@@ -81,7 +81,9 @@
     ...
   }:
     {
-      inherit inputs name;
+      # We cannot inherit name, as it will conflict with the workings of submodules.
+      # It would for example lead to misconfiguring home manager.
+      inherit inputs;
       nixcfg = self;
       nixcfgs = nixcfgsData.attrs;
     }

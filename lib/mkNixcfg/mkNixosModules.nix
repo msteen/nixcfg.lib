@@ -36,6 +36,7 @@
     (pkgs.lib)
     mkDefault
     mkIf
+    mkOverride
     optional
     optionals
     ;
@@ -51,8 +52,21 @@ in
         useGlobalPkgs = true;
         useUserPackages = true;
         extraSpecialArgs = mkSpecialArgs homeArgs;
-        users = mapAttrs (mkHomeModules homeArgs) homeArgs.users;
+        users = mapAttrs (username: user: { imports = mkHomeModules homeArgs username user; }) homeArgs.users;
       };
+
+      # Prevent conflicting definition values due to:
+      # https://github.com/nix-community/home-manager/blob/40ebb62101c83de81e5fd7c3cfe5cea2ed21b1ad/nixos/common.nix#L34
+      users.users =
+        mapAttrs (username: { homeDirectory, ... }: {
+          isNormalUser = true;
+          # Make the override 1 stronger than `mkDefault`,
+          # thus overriding `mkDefault "users"` while still make it easy to override.
+          group = mkOverride 999 username;
+          home = homeDirectory;
+        })
+        homeArgs.users;
+      users.groups = mapAttrs (_: _: { }) homeArgs.users;
     }
   ])
   ++ singleton ({ config, ... }: {
