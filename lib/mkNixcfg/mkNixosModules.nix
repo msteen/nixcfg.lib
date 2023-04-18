@@ -3,7 +3,6 @@
   self,
   nixcfgs,
   nixcfgsInputs,
-  nixcfgsChannels,
   homeApplyArgs,
   mkSpecialArgs,
   mkHomeModules,
@@ -14,6 +13,7 @@
   pkgs,
   stateVersion,
   modules,
+  channels,
   ...
 }: let
   inherit
@@ -86,7 +86,7 @@ in
     networking.hostId = mkDefault (substring 0 8 (hashString "sha256" name));
 
     nixpkgs.pkgs = mkDefault pkgs;
-    nixpkgs.overlays = [ (final: prev: nixcfgsChannels) ] ++ catAttrs "overlay" nixcfgs;
+    nixpkgs.overlays = [ (final: prev: channels) ] ++ catAttrs "overlay" nixcfgs;
 
     system.configurationRevision = mkIf (self ? rev) self.rev;
     system.stateVersion = stateVersion;

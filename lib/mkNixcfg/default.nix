@@ -116,7 +116,7 @@
   };
 
   mkNixosModules = import ./mkNixosModules.nix {
-    inherit mkHomeModules mkSpecialArgs nixcfgs nixcfgsChannels nixcfgsInputs nixpkgs self;
+    inherit mkHomeModules mkSpecialArgs nixcfgs nixcfgsInputs nixpkgs self;
     homeApplyArgs = applyArgs.home;
   };
 
