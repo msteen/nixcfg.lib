@@ -71,20 +71,13 @@
       nixpkgs = latestNixpkgs.nixos or latestNixpkgs.release or fallbackNixpkgs;
     };
 
-  mkChannels = inputs:
-    import ./mkChannels.nix {
-      inherit nixpkgs;
-      channels = rawArgs.channels or { };
-    }
-    inputs;
-
   systems = rawArgs.systems or [ "x86_64-linux" "aarch64-linux" ];
 
   nixcfgsData = import ./mkNixcfgs.nix { inherit nixcfg nixpkgs; } rawArgs.inputs;
   nixcfgs = nixcfgsData.list;
   nixcfgsInputs = concatAttrs (catAttrs "inputs" nixcfgs);
   nixcfgsNixpkgsInputs = withDefaultNixpkgs (filterNixpkgsInputs nixcfgsInputs) (nixcfgsInputs ? nixpkgs) nixpkgs;
-  nixcfgsChannels = mkChannels systems nixcfgsNixpkgsInputs;
+  nixcfgsChannels = mkChannels nixcfgsNixpkgsInputs systems;
   nixcfgsLib = let
     channelName = rawArgs.lib.channelName or "nixpkgs";
     input =
@@ -96,6 +89,11 @@
       // {
         lib = input.lib // { inherit input; };
       });
+
+  mkChannels = import ./mkChannels.nix {
+    inherit nixpkgs;
+    channels = rawArgs.channels or { };
+  };
 
   mkSpecialArgs = {
     name,
@@ -354,9 +352,9 @@
           inputs = removeAttrs rawArgs.inputs [ "self" ] // configurationArgs.inputs;
           channels =
             withDefaultNixpkgs
-            (recursiveUpdate nixcfgsChannels.${system} (mkChannels [ system ] (filterNixpkgsInputs inputs)).${system})
+            (recursiveUpdate nixcfgsChannels.${system} (mkChannels (filterNixpkgsInputs inputs) [ system ]).${system})
             (nixcfgsInputs ? nixpkgs || inputs ? nixpkgs)
-            (mkChannels [ system ] { inherit nixpkgs; }).${system}.nixpkgs;
+            (mkChannels { inherit nixpkgs; } [ system ]).${system}.nixpkgs;
           pkgs = channels.${channelName} or (throw "The ${type} nixpkgs channel '${channelName}' does not exist.");
         in {
           inherit channels inputs name pkgs;

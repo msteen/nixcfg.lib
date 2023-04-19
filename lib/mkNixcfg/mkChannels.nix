@@ -1,7 +1,7 @@
 {
   nixpkgs,
   channels,
-}: systems: inputs: let
+}: let
   inherit
     (builtins)
     mapAttrs
@@ -11,6 +11,18 @@
     genAttrs
     optionalString
     ;
+
+  importChannel = {
+    input,
+    system,
+    config ? { },
+    overlays ? [ ],
+  }:
+    importNixpkgs {
+      inherit input system;
+      config = { allowUnfree = true; } // config;
+      overlays = overlays ++ [ (final: prev: { inherit input; }) ];
+    };
 
   # Skip impure.nix: ${input} -> ${input}/pkgs/top-level/impure.nix -> ${input}/pkgs/top-level
   importNixpkgs = {
@@ -41,32 +53,20 @@
           inherit patches;
         };
       };
-
-  getChannels = system:
-    mapAttrs (_: input: { inherit input system; }) inputs
-    // mapAttrs (
-      name: {
-        input ?
-          inputs.${name}
-          or (throw "Channel '${name}' is missing the required input attribute or does not have it implicit through inputs."),
-        ...
-      } @ channel:
-        channel // { inherit input system; }
-    )
-    channels;
-
-  importChannel = {
-    input,
-    system,
-    config ? { },
-    overlays ? [ ],
-  }:
-    importNixpkgs {
-      inherit input system;
-      config = { allowUnfree = true; } // config;
-      overlays = overlays ++ [ (final: prev: { inherit input; }) ];
-    };
 in
-  genAttrs systems (system:
-    mapAttrs (name: channel:
-      importChannel (patchChannel name channel)) (getChannels system))
+  inputs: systems:
+    genAttrs systems (system:
+      mapAttrs (name: channel:
+        importChannel (patchChannel name channel)) (
+        mapAttrs (_: input: { inherit input system; }) inputs
+        // mapAttrs (
+          name: {
+            input ?
+              inputs.${name}
+              or (throw "Channel '${name}' is missing the required input attribute or does not have it implicit through inputs."),
+            ...
+          } @ channel:
+            channel // { inherit input system; }
+        )
+        channels
+      ))
