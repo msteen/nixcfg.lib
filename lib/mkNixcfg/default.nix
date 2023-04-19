@@ -125,6 +125,7 @@
       lib."overlay.nix" = "libOverlay";
       pkgs."overlay.nix" = "overlay";
       overlays = "overlays";
+      data = "data";
       secrets = "secrets";
     }
     // mapAttrs (name: _: {
@@ -397,6 +398,7 @@ in
   {
     inherit nixcfgs overlays;
     inherit (rawArgs) inputs name;
+    data = mapAttrs (_: import) listedArgs.data // rawArgs.data or { };
     outPath = rawArgs.path;
     lib = nixcfgsLib;
   }
