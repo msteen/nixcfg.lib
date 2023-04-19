@@ -1,7 +1,11 @@
 {
   nixpkgs,
   nixcfgs,
-}: { stateVersion, ... }: username: {
+}: {
+  stateVersion,
+  channels,
+  ...
+}: username: {
   homeDirectory,
   modules,
 }: let
@@ -20,6 +24,7 @@ in
   ++ modules
   ++ singleton
   {
+    nixpkgs.overlays = [ (final: prev: channels) ] ++ catAttrs "overlay" nixcfgs;
     home = { inherit homeDirectory stateVersion username; };
     programs.home-manager.enable = true;
   }
