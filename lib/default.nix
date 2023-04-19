@@ -52,6 +52,11 @@ in rec {
     null
     list;
 
+  optionalAttr = name: attrs:
+    if attrs ? ${name}
+    then [ attrs.${name} ]
+    else [ ];
+
   optionalInherit = attrs: names:
     listToAttrs (concatMap (name:
       if attrs ? ${name}

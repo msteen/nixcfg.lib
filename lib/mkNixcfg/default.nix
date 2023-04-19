@@ -48,6 +48,7 @@
     listAttrs
     mapToAttrs
     maximum
+    optionalAttr
     optionalInherit
     ;
 
@@ -146,12 +147,14 @@
       default = _: default // { modules = [ ]; };
 
       extend = final: prev: name: {
-        modules =
-          prev.${name}.modules
-          ++ [
-            listedArgs.nixosConfigurations.${name}
-            or (throw "The nixos configuration '${name}' is missing in 'nixos/configs/'.")
-          ];
+        modules = let
+          modules =
+            prev.${name}.modules
+            ++ optionalAttr name listedArgs.nixosConfigurations;
+        in
+          if modules == [ ]
+          then throw "The nixos configuration '${name}' is missing in 'nixos/configs/'."
+          else modules;
       };
 
       apply = args: (import (args.pkgs.input + "/nixos/lib/eval-config.nix") {
@@ -176,12 +179,14 @@
         else throw "The container configuration '${name}' should be in the root of 'container/configs/<name>' as '{container,nixos}.nix' or '{container,nixos}/default.nix'.");
 
       extend = final: prev: name: {
-        modules =
-          prev.${name}.modules
-          ++ [
-            listedArgs.containerConfigurations."${name}_nixos"
-            or (throw "The container configuration '${name}' is missing in 'container/configs/'.")
-          ];
+        modules = let
+          modules =
+            prev.${name}.modules
+            ++ optionalAttr "${name}_nixos" listedArgs.containerConfigurations;
+        in
+          if modules == [ ]
+          then throw "The container configuration '${name}' is missing in 'container/configs/'."
+          else modules;
       };
 
       requiredInputs = [ "extra-container" ];
@@ -255,12 +260,14 @@
         then throw "The home configuration '${name}' has the options ${toJSON invalidOptions} that do not equal those found in its NixOS configuration."
         else {
           users = username: {
-            modules =
-              prev.${name}.users.${username}.modules
-              ++ [
-                listedArgs.homeConfigurations."${name}_${username}"
-                or (throw "The home configuration '${name}' is missing a user configuration for '${username}' in 'home/configs/${name}/'.")
-              ];
+            modules = let
+              modules =
+                prev.${name}.users.${username}.modules
+                ++ optionalAttr "${name}_${username}" listedArgs.homeConfigurations;
+            in
+              if modules == [ ]
+              then throw "The home configuration '${name}' is missing a user configuration for '${username}' in 'home/configs/${name}/'."
+              else modules;
           };
         };
 

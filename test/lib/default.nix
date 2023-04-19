@@ -522,6 +522,42 @@
         fails self.nixosConfigurationsArgs.hello;
       expected = true;
     };
+
+    testNoConfigFile_1 = {
+      expr = let
+        self = mkNixcfg {
+          name = "example";
+          path = ./nixcfg;
+          inputs =
+            inputs
+            // {
+              inherit self;
+            };
+          nixosConfigurations.nofile = { };
+        };
+      in
+        fails self.nixosConfigurationsArgs.nofile;
+      expected = true;
+    };
+
+    testNoConfigFile_2 = {
+      expr = let
+        self = mkNixcfg {
+          name = "example";
+          path = ./nixcfg;
+          inputs =
+            inputs
+            // {
+              inherit self;
+            };
+          nixosConfigurations.nofile = {
+            modules = [ { } ];
+          };
+        };
+      in
+        self.nixosConfigurations.x86_64-linux ? nofile;
+      expected = true;
+    };
   };
 in
   runTests tests
