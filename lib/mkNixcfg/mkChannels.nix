@@ -1,9 +1,11 @@
 {
   nixpkgs,
+  nixcfgsOverlays,
   channels,
 }: let
   inherit
     (builtins)
+    isFunction
     mapAttrs
     ;
   inherit
@@ -21,7 +23,13 @@
     importNixpkgs {
       inherit input system;
       config = { allowUnfree = true; } // config;
-      overlays = overlays ++ [ (final: prev: { inherit input; }) ];
+      overlays =
+        (
+          if isFunction overlays
+          then overlays nixcfgsOverlays
+          else overlays
+        )
+        ++ [ (final: prev: { inherit input; }) ];
     };
 
   # Skip impure.nix: ${input} -> ${input}/pkgs/top-level/impure.nix -> ${input}/pkgs/top-level

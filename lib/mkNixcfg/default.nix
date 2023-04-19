@@ -12,6 +12,7 @@
     elem
     elemAt
     filter
+    getAttr
     groupBy
     head
     intersectAttrs
@@ -92,6 +93,7 @@
 
   mkChannels = import ./mkChannels.nix {
     inherit nixpkgs;
+    nixcfgsOverlays = mapAttrs (_: getAttr "overlays") nixcfgsData.attrs;
     channels = rawArgs.channels or { };
   };
 
@@ -380,18 +382,26 @@
           applyArgs.${type}))
     )
     types;
+
+  overlays = let
+    overlays = mapAttrs (_: import) listedArgs.overlays // rawArgs.overlays or { };
+  in
+    if overlays ? default
+    then throw "The overlay name 'default' is already reserved for the overlay defined in 'pkgs/overlay.nix'."
+    else
+      overlays
+      // optionalAttrs (self ? overlay) {
+        default = self.overlay;
+      };
 in
   {
+    inherit nixcfgs overlays;
     inherit (rawArgs) inputs name;
-    inherit nixcfgs;
     outPath = rawArgs.path;
     lib = nixcfgsLib;
   }
   # Nixpkgs overlays are required to be overlay functions, paths are not allowed.
-  // mapAttrs (_: x:
-    if isAttrs x
-    then mapAttrs (_: import) x
-    else import x) (optionalInherit listedArgs [ "libOverlay" "overlay" "overlays" ])
+  // mapAttrs (_: import) (optionalInherit listedArgs [ "libOverlay" "overlay" ])
   // getAttrs (concatMap (type: [ "${type}Modules" "${type}Profiles" ]) (attrNames types)) listedArgs
   // mapAttrs' (type: nameValuePair "${type}ConfigurationsArgs") configurationsArgs
   // mapAttrs' (type: nameValuePair "${type}Configurations") configurations

@@ -558,6 +558,26 @@
         self.nixosConfigurations.x86_64-linux ? nofile;
       expected = true;
     };
+
+    testOverlays = {
+      expr = let
+        self = mkNixcfg {
+          name = "example";
+          path = ./nixcfg;
+          inputs =
+            inputs
+            // {
+              inherit self;
+            };
+          overlays = { foo = final: prev: { overlay = true; }; };
+          channels.nixpkgs = {
+            overlays = overlays: [ overlays.example.foo ];
+          };
+        };
+      in
+        self.nixosConfigurations.x86_64-linux.ubuntu.pkgs ? overlay;
+      expected = true;
+    };
   };
 in
   runTests tests
