@@ -1,6 +1,7 @@
 {
   nixpkgs,
   nixcfgs,
+  mkDefaultModules,
 }: {
   stateVersion,
   channels,
@@ -11,19 +12,16 @@
 }: let
   inherit
     (builtins)
-    attrValues
     catAttrs
-    concatMap
     ;
   inherit
     (nixpkgs.lib)
     singleton
     ;
 in
-  concatMap attrValues (catAttrs "homeModules" nixcfgs)
+  mkDefaultModules "home"
   ++ modules
-  ++ singleton
-  {
+  ++ singleton {
     nixpkgs.overlays = [ (final: prev: channels) ] ++ catAttrs "overlay" nixcfgs;
     home = { inherit homeDirectory stateVersion username; };
     programs.home-manager.enable = true;

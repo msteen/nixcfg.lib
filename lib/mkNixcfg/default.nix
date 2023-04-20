@@ -97,6 +97,10 @@
     channels = rawArgs.channels or { };
   };
 
+  mkDefaultModules = type:
+    concatMap attrValues (catAttrs "${type}Modules" nixcfgs)
+    ++ concatMap (optionalAttr "base") (catAttrs "${type}Profiles" nixcfgs);
+
   mkSpecialArgs = {
     name,
     inputs,
@@ -113,11 +117,11 @@
     // moduleArgs;
 
   mkHomeModules = import ./mkHomeModules.nix {
-    inherit nixcfgs nixpkgs;
+    inherit mkDefaultModules nixcfgs nixpkgs;
   };
 
   mkNixosModules = import ./mkNixosModules.nix {
-    inherit mkHomeModules mkSpecialArgs nixcfgs nixcfgsInputs nixpkgs self;
+    inherit mkDefaultModules mkHomeModules mkSpecialArgs nixcfgs nixcfgsInputs nixpkgs self;
     homeApplyArgs = applyArgs.home;
   };
 
@@ -215,7 +219,7 @@
               specialArgs = mkSpecialArgs args;
               config = {
                 imports =
-                  concatMap attrValues (catAttrs "containerModules" nixcfgs)
+                  mkDefaultModules "container"
                   ++ mkNixosModules args;
               };
             }

@@ -1,0 +1,3 @@
+{
+  lib.base = true;
+}

@@ -134,7 +134,9 @@
         nixosModules = {
           test = ./nixcfg/nixos/modules/test.nix;
         };
-        nixosProfiles = { };
+        nixosProfiles = {
+          base = ./nixcfg/nixos/profiles/base.nix;
+        };
         homeConfigurations = {
           ubuntu_matthijs = ./nixcfg/home/configs/ubuntu/matthijs.nix;
         };
@@ -576,6 +578,22 @@
         };
       in
         self.nixosConfigurations.x86_64-linux.ubuntu.pkgs ? overlay;
+      expected = true;
+    };
+
+    testBaseProfile = {
+      expr = let
+        self = mkNixcfg {
+          name = "example";
+          path = ./nixcfg;
+          inputs =
+            inputs
+            // {
+              inherit self;
+            };
+        };
+      in
+        self.nixosConfigurations.x86_64-linux.ubuntu.config.lib ? base;
       expected = true;
     };
   };
