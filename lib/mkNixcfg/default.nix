@@ -28,6 +28,7 @@
     ;
   inherit
     (nixpkgs.lib)
+    concatStrings
     filterAttrs
     foldr
     getAttrs
@@ -35,6 +36,7 @@
     mapAttrs'
     mapAttrsToList
     nameValuePair
+    optional
     optionalAttrs
     recursiveUpdate
     singleton
@@ -220,7 +222,20 @@
               config = {
                 imports =
                   mkDefaultModules "container"
-                  ++ mkNixosModules args;
+                  ++ mkNixosModules args
+                  ++ optional (applyArgs.home ? ${name}) {
+                    systemd.services.fix-home-manager = {
+                      serviceConfig = {
+                        Type = "oneshot";
+                      };
+                      script = concatStrings (mapAttrsToList (name: _: ''
+                          mkdir -p /nix/var/nix/{profiles,gcroots}/per-user/${name}
+                          chown ${name}:root /nix/var/nix/{profiles,gcroots}/per-user/${name}
+                        '')
+                        applyArgs.home.${name}.users);
+                      wantedBy = [ "multi-user.target" ];
+                    };
+                  };
               };
             }
             listedArgs.containerConfigurations."${name}_container" or { }
