@@ -62,6 +62,7 @@ in
           isNormalUser = true;
           # Make the override 1 stronger than `mkDefault`,
           # thus overriding `mkDefault "users"` while still make it easy to override.
+          # The use of a users main group is outdated due to security concerns, such as giving accidental write access.
           group = mkOverride 999 username;
           home = homeDirectory;
         })
