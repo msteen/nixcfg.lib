@@ -2,7 +2,6 @@
   nixpkgs,
   self,
   nixcfgs,
-  nixcfgsInputs,
   mkDefaultModules,
   requireSops,
   homeApplyArgs,
@@ -44,13 +43,13 @@ in
   mkDefaultModules "nixos"
   ++ modules
   ++ optionals requireSops [
-    (inputs.sops-nix or nixcfgsInputs.sops-nix).nixosModules.sops
+    inputs.sops-nix.nixosModules.sops
     ./profiles/sops.nix
   ]
   ++ optionals (homeApplyArgs ? ${name}) (let
     homeArgs = homeApplyArgs.${name};
   in [
-    (homeArgs.inputs.home-manager or nixcfgsInputs.home-manager).nixosModules.home-manager
+    homeArgs.inputs.home-manager.nixosModules.home-manager
     {
       home-manager = {
         useGlobalPkgs = true;

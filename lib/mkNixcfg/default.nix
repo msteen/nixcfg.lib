@@ -120,11 +120,11 @@
     // moduleArgs;
 
   mkHomeModules = import ./mkHomeModules.nix {
-    inherit mkDefaultModules nixcfgs nixcfgsInputs nixpkgs requireSops;
+    inherit mkDefaultModules nixcfgs nixpkgs requireSops;
   };
 
   mkNixosModules = import ./mkNixosModules.nix {
-    inherit mkDefaultModules mkHomeModules mkSpecialArgs nixcfgs nixcfgsInputs nixpkgs requireSops self;
+    inherit mkDefaultModules mkHomeModules mkSpecialArgs nixcfgs nixpkgs requireSops self;
     homeApplyArgs = applyArgs.home;
   };
 
@@ -217,7 +217,7 @@
       } @ args: let
         inherit (lib) mkMerge;
       in
-        (inputs.extra-container or nixcfgsInputs.extra-container).lib.buildContainers {
+        inputs.extra-container.lib.buildContainers {
           inherit system;
           # This potentially needs to be newer than the configured nixpkgs channel,
           # due to `specialArgs` support being a very recent addition to NixOS containers.
@@ -310,7 +310,7 @@
         ...
       } @ args:
         mapAttrsToList (username: user:
-          nameValuePair "${name}_${username}" ((inputs.home-manager or nixcfgsInputs.home-manager).lib.homeManagerConfiguration {
+          nameValuePair "${name}_${username}" (inputs.home-manager.lib.homeManagerConfiguration {
             inherit pkgs;
             extraSpecialArgs = mkSpecialArgs args;
             modules = mkHomeModules args username user;
@@ -346,23 +346,13 @@
     in
       mapAttrs (
         name: {
-          inputs,
           system,
           channelName,
           ...
         } @ configurationArgs:
           if !(elem system systems)
           then throw "The ${type} configuration '${name}' has system '${system}', which is not listed in the supported systems."
-          else
-            foldr (
-              requiredInput: accum: (
-                if !(inputs ? ${requiredInput} || nixcfgsInputs ? ${requiredInput})
-                then throw "The ${type} configuration '${name}' did not specify '${requiredInput}' as part of their inputs."
-                else accum
-              )
-            )
-            configurationArgs
-            ((configuration.requiredInputs or [ ]) ++ optional requireSops "sops-nix")
+          else configurationArgs
       )
       configurationsArgs)
     types;
@@ -379,17 +369,21 @@
           channelName,
           ...
         } @ configurationArgs: let
-          inputs = removeAttrs rawArgs.inputs [ "self" ] // configurationArgs.inputs;
+          inputs = nixcfgsInputs // rawArgs.inputs // configurationArgs.inputs;
           channels =
             withDefaultNixpkgs
-            (recursiveUpdate nixcfgsChannels.${system} (mkChannels (filterNixpkgsInputs inputs) [ system ]).${system})
-            (nixcfgsInputs ? nixpkgs || inputs ? nixpkgs)
+            (recursiveUpdate (mkChannels (filterNixpkgsInputs inputs) [ system ]).${system} nixcfgsChannels.${system})
+            (inputs ? nixpkgs)
             (mkChannels { inherit nixpkgs; } [ system ]).${system}.nixpkgs;
           pkgs = channels.${channelName} or (throw "The ${type} nixpkgs channel '${channelName}' does not exist.");
-        in {
-          inherit channels inputs name pkgs;
-          inherit (pkgs) lib;
-        }
+          unavailableInputs = filter (requiredInput: !(inputs ? ${requiredInput})) ((types.${type}.requiredInputs or [ ]) ++ optional requireSops "sops-nix");
+        in
+          if unavailableInputs != [ ]
+          then throw "The ${type} configuration '${name}' did not specify '${head unavailableInputs}' as part of their inputs."
+          else {
+            inherit channels inputs name pkgs;
+            inherit (pkgs) lib;
+          }
       )
       configurationsArgs))
   configurationsArgs;

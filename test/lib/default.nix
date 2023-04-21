@@ -246,7 +246,7 @@
           };
         };
       in
-        fails self.homeConfigurationsArgs;
+        fails self.homeConfigurations;
       expected = true;
     };
 

@@ -1,7 +1,6 @@
 {
   nixpkgs,
   nixcfgs,
-  nixcfgsInputs,
   mkDefaultModules,
   requireSops,
 }: {
@@ -25,7 +24,7 @@
 in
   mkDefaultModules "home"
   ++ optionals requireSops [
-    (inputs.sops-nix or nixcfgsInputs.sops-nix).homeManagerModules.sops
+    inputs.sops-nix.homeManagerModules.sops
     ./profiles/sops.nix
   ]
   ++ modules
