@@ -3,13 +3,11 @@
   nixcfgsOverlays,
   channels,
 }: let
-  inherit
-    (builtins)
+  inherit (builtins)
     isFunction
     mapAttrs
     ;
-  inherit
-    (nixpkgs.lib)
+  inherit (nixpkgs.lib)
     genAttrs
     optionalString
     ;

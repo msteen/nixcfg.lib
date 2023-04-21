@@ -2,8 +2,7 @@
   nixpkgs,
   nixcfg,
 }: rawArgs: let
-  inherit
-    (builtins)
+  inherit (builtins)
     attrNames
     attrValues
     catAttrs
@@ -26,8 +25,7 @@
     splitVersion
     toJSON
     ;
-  inherit
-    (nixpkgs.lib)
+  inherit (nixpkgs.lib)
     concatStrings
     filterAttrs
     foldr
@@ -41,8 +39,7 @@
     recursiveUpdate
     singleton
     ;
-  inherit
-    (nixcfg.lib)
+  inherit (nixcfg.lib)
     applyAttrs
     concatAttrs
     concatMapAttrsToList

@@ -2,8 +2,7 @@
   nixpkgs,
   nixcfg,
 }: let
-  inherit
-    (builtins)
+  inherit (builtins)
     all
     attrValues
     catAttrs
@@ -15,12 +14,10 @@
     trace
     tryEval
     ;
-  inherit
-    (nixpkgs.lib)
+  inherit (nixpkgs.lib)
     runTests
     ;
-  inherit
-    (nixcfg.lib)
+  inherit (nixcfg.lib)
     applyAttrs
     concatAttrs
     concatAttrsRecursive
@@ -54,21 +51,20 @@
     };
   };
 
-  inherit
-    ((
-        import
-        (
-          let
-            lock = builtins.fromJSON (builtins.readFile ./flake.lock);
-          in
-            fetchTarball {
-              url = "https://github.com/edolstra/flake-compat/archive/${lock.nodes.flake-compat.locked.rev}.tar.gz";
-              sha256 = lock.nodes.flake-compat.locked.narHash;
-            }
-        )
-        { src = ./.; }
+  inherit ((
+      import
+      (
+        let
+          lock = builtins.fromJSON (builtins.readFile ./flake.lock);
+        in
+          fetchTarball {
+            url = "https://github.com/edolstra/flake-compat/archive/${lock.nodes.flake-compat.locked.rev}.tar.gz";
+            sha256 = lock.nodes.flake-compat.locked.narHash;
+          }
       )
-      .defaultNix)
+      { src = ./.; }
+    )
+    .defaultNix)
     inputs
     ;
 

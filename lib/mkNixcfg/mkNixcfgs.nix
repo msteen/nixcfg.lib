@@ -2,22 +2,19 @@
   nixpkgs,
   nixcfg,
 }: let
-  inherit
-    (builtins)
+  inherit (builtins)
     attrValues
     catAttrs
     concatLists
     ;
-  inherit
-    (nixpkgs.lib)
+  inherit (nixpkgs.lib)
     attrVals
     filterAttrs
     hasPrefix
     nameValuePair
     unique
     ;
-  inherit
-    (nixcfg.lib)
+  inherit (nixcfg.lib)
     mapToAttrs
     ;
 in

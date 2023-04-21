@@ -2,21 +2,18 @@
   nixpkgs,
   nixcfg,
 }: let
-  inherit
-    (builtins)
+  inherit (builtins)
     attrNames
     concatMap
     isAttrs
     listToAttrs
     readDir
     ;
-  inherit
-    (nixpkgs.lib)
+  inherit (nixpkgs.lib)
     hasInfix
     singleton
     ;
-  inherit
-    (nixcfg.lib)
+  inherit (nixcfg.lib)
     flattenInheritAttrs
     listNixTree
     ;

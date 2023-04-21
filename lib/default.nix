@@ -2,8 +2,7 @@
   nixpkgs,
   nixcfg,
 }: let
-  inherit
-    (builtins)
+  inherit (builtins)
     attrNames
     concatLists
     concatMap
@@ -19,8 +18,7 @@
     readDir
     zipAttrsWith
     ;
-  inherit
-    (nixpkgs.lib)
+  inherit (nixpkgs.lib)
     const
     extends
     fix

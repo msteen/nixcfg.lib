@@ -17,22 +17,19 @@
   pkgs,
   ...
 }: let
-  inherit
-    (builtins)
+  inherit (builtins)
     catAttrs
     concatStringsSep
     hashString
     mapAttrs
     substring
     ;
-  inherit
-    (nixpkgs.lib)
+  inherit (nixpkgs.lib)
     mapAttrs'
     singleton
     versionAtLeast
     ;
-  inherit
-    (pkgs.lib)
+  inherit (pkgs.lib)
     mkDefault
     mkIf
     mkOverride

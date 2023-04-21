@@ -12,12 +12,10 @@
   homeDirectory,
   modules,
 }: let
-  inherit
-    (builtins)
+  inherit (builtins)
     catAttrs
     ;
-  inherit
-    (nixpkgs.lib)
+  inherit (nixpkgs.lib)
     optional
     singleton
     ;
