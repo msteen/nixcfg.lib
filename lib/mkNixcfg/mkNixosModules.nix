@@ -42,10 +42,7 @@
 in
   mkDefaultModules "nixos"
   ++ modules
-  ++ optionals requireSops [
-    inputs.sops-nix.nixosModules.sops
-    ./profiles/sops.nix
-  ]
+  ++ optional requireSops inputs.sops-nix.nixosModules.sops
   ++ optionals (homeApplyArgs ? ${name}) (let
     homeArgs = homeApplyArgs.${name};
   in [
