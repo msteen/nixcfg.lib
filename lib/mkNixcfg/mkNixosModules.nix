@@ -11,10 +11,10 @@
   name,
   inputs,
   system,
-  pkgs,
   stateVersion,
   modules,
   channels,
+  pkgs,
   ...
 }: let
   inherit

@@ -172,28 +172,34 @@
     };
 
     container = {
-      default = _: default // { modules = [ ]; };
+      default = _:
+        default
+        // {
+          modules.nixos = [ ];
+          modules.container = [ ];
+        };
 
       fromListed = mapToAttrs ({
         name,
         nameParts,
         ...
-      }: let
-        target = elemAt nameParts 1;
-      in
-        if length nameParts == 2 && elem target [ "container" "nixos" ]
+      }:
+        if length nameParts == 2 && elem (elemAt nameParts 1) [ "container" "nixos" ]
         then nameValuePair (head nameParts) { }
         else throw "The container configuration '${name}' should be in the root of 'container/configs/<name>' as '{container,nixos}.nix' or '{container,nixos}/default.nix'.");
 
       extend = final: prev: name: {
-        modules = let
+        modules.nixos = let
           modules =
-            prev.${name}.modules
+            prev.${name}.modules.nixos
             ++ optionalAttr "${name}_nixos" listedArgs.containerConfigurations;
         in
           if modules == [ ]
-          then throw "The container configuration '${name}' is missing in 'container/configs/'."
+          then throw "The container configuration '${name}' should be in the root of 'container/configs/<name>' as 'nixos.nix' or 'nixos/default.nix'."
           else modules;
+        modules.container =
+          prev.${name}.modules.container
+          ++ optionalAttr "${name}_container" listedArgs.containerConfigurations;
       };
 
       requiredInputs = [ "extra-container" ];
@@ -202,8 +208,7 @@
         name,
         inputs,
         system,
-        channels,
-        pkgs,
+        modules,
         lib,
         ...
       } @ args: let
@@ -216,13 +221,14 @@
           # Rather than making it configurable seperately, we use the default behavior,
           # of it defaulting to the nixpkgs input of `extra-container`.
           # nixpkgs = pkgs.input;
-          config.containers.${name} = mkMerge [
-            {
+          config.containers.${name} = mkMerge (
+            mkDefaultModules "container"
+            ++ modules.container
+            ++ singleton {
               specialArgs = mkSpecialArgs args;
               config = {
                 imports =
-                  mkDefaultModules "container"
-                  ++ mkNixosModules args
+                  mkNixosModules (args // { modules = modules.nixos; })
                   ++ optional (applyArgs.home ? ${name}) {
                     systemd.services.fix-home-manager = {
                       serviceConfig = {
@@ -238,8 +244,7 @@
                   };
               };
             }
-            listedArgs.containerConfigurations."${name}_container" or { }
-          ];
+          );
         };
     };
 

@@ -437,7 +437,10 @@
           channelName = "nixpkgs";
           inputs = { };
           moduleArgs = { };
-          modules = [ ./nixcfg/container/configs/hello/nixos.nix ];
+          modules = {
+            container = [ ./nixcfg/container/configs/hello/container.nix ];
+            nixos = [ ./nixcfg/container/configs/hello/nixos.nix ];
+          };
           stateVersion = "22.11";
           system = "x86_64-linux";
         };
