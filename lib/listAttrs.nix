@@ -12,7 +12,7 @@
     ;
   inherit
     (nixpkgs.lib)
-    hasSuffix
+    hasInfix
     singleton
     ;
   inherit
@@ -22,7 +22,7 @@
     ;
 
   nameToType = name:
-    if hasSuffix ".nix" name
+    if hasInfix "." name
     then "regular"
     else "directory";
 

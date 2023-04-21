@@ -53,6 +53,7 @@
     maximum
     optionalAttr
     optionalInherit
+    traceJSONMap
     ;
 
   inherit (rawArgs.inputs) self;
@@ -119,11 +120,11 @@
     // moduleArgs;
 
   mkHomeModules = import ./mkHomeModules.nix {
-    inherit mkDefaultModules nixcfgs nixpkgs;
+    inherit mkDefaultModules nixcfgs nixcfgsInputs nixpkgs requireSops;
   };
 
   mkNixosModules = import ./mkNixosModules.nix {
-    inherit mkDefaultModules mkHomeModules mkSpecialArgs nixcfgs nixcfgsInputs nixpkgs self;
+    inherit mkDefaultModules mkHomeModules mkSpecialArgs nixcfgs nixcfgsInputs nixpkgs requireSops self;
     homeApplyArgs = applyArgs.home;
   };
 
@@ -132,7 +133,7 @@
       pkgs."overlay.nix" = "overlay";
       overlays = "overlays";
       data = "data";
-      secrets = "secrets";
+      ".sops.yaml" = "sopsConfig";
     }
     // mapAttrs (name: _: {
       configs = "${name}Configurations";
@@ -140,6 +141,8 @@
       profiles = "${name}Profiles";
     })
     types);
+
+  requireSops = listedArgs ? sopsConfig;
 
   types = let
     default = {
@@ -359,7 +362,7 @@
               )
             )
             configurationArgs
-            configuration.requiredInputs or [ ]
+            ((configuration.requiredInputs or [ ]) ++ optional requireSops "sops-nix")
       )
       configurationsArgs)
     types;

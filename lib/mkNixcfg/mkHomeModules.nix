@@ -1,8 +1,11 @@
 {
   nixpkgs,
   nixcfgs,
+  nixcfgsInputs,
   mkDefaultModules,
+  requireSops,
 }: {
+  inputs,
   stateVersion,
   channels,
   ...
@@ -16,10 +19,15 @@
     ;
   inherit
     (nixpkgs.lib)
+    optionals
     singleton
     ;
 in
   mkDefaultModules "home"
+  ++ optionals requireSops [
+    (inputs.sops-nix or nixcfgsInputs.sops-nix).homeManagerModules.sops
+    ./profiles/sops.nix
+  ]
   ++ modules
   ++ singleton {
     nixpkgs.overlays = [ (final: prev: channels) ] ++ catAttrs "overlay" nixcfgs;
