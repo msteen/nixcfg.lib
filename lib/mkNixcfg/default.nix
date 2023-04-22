@@ -116,13 +116,18 @@
     }
     // moduleArgs;
 
-  mkHomeModules = import ./mkHomeModules.nix {
-    inherit mkDefaultModules nixcfgs nixpkgs requireSops;
-  };
+  mkSharedModules = type: { name, ... }:
+    optional requireSops {
+      sops.defaultSopsFile = self.outPath + "/${type}/configs/${name}/secrets.yaml";
+    };
 
   mkNixosModules = import ./mkNixosModules.nix {
     inherit mkDefaultModules mkHomeModules mkSpecialArgs nixcfgs nixpkgs requireSops self;
     homeApplyArgs = applyArgs.home;
+  };
+
+  mkHomeModules = import ./mkHomeModules.nix {
+    inherit mkDefaultModules nixcfgs nixpkgs requireSops;
   };
 
   listedArgs = listAttrs rawArgs.path ({
@@ -167,7 +172,7 @@
       apply = args: (import (args.pkgs.input + "/nixos/lib/eval-config.nix") {
         inherit (args) lib system;
         specialArgs = mkSpecialArgs args;
-        modules = mkNixosModules args;
+        modules = mkSharedModules "nixos" args ++ mkNixosModules args;
       });
     };
 
@@ -228,7 +233,8 @@
               specialArgs = mkSpecialArgs args;
               config = {
                 imports =
-                  mkNixosModules (args // { modules = modules.nixos; })
+                  mkSharedModules "container" args
+                  ++ mkNixosModules (args // { modules = modules.nixos; })
                   ++ optional (applyArgs.home ? ${name}) {
                     systemd.services.fix-home-manager = {
                       serviceConfig = {
@@ -310,7 +316,7 @@
           nameValuePair "${name}_${username}" (inputs.home-manager.lib.homeManagerConfiguration {
             inherit pkgs;
             extraSpecialArgs = mkSpecialArgs args;
-            modules = mkHomeModules args username user;
+            modules = mkSharedModules "home" args ++ mkHomeModules args username user;
             check = true;
           }))
         users;
