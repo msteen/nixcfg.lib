@@ -49,6 +49,7 @@
     maximum
     optionalAttr
     optionalInherit
+    updateLevels
     ;
 
   inherit (rawArgs.inputs) self;
@@ -95,9 +96,12 @@
     channels = rawArgs.channels or { };
   };
 
-  mkDefaultModules = type:
+  mkDefaultModules = type: name:
     concatMap attrValues (catAttrs "${type}Modules" nixcfgs)
-    ++ concatMap (optionalAttr "base") (catAttrs "${type}Profiles" nixcfgs);
+    ++ concatMap (optionalAttr "base") (catAttrs "${type}Profiles" nixcfgs)
+    ++ optional requireSops {
+      sops.defaultSopsFile = self.outPath + "/${type}/configs/${name}/secrets.yaml";
+    };
 
   mkSpecialArgs = {
     name,
@@ -113,11 +117,6 @@
       nixcfgs = nixcfgsData.attrs;
     }
     // moduleArgs;
-
-  mkSharedModules = type: { name, ... }:
-    optional requireSops {
-      sops.defaultSopsFile = self.outPath + "/${type}/configs/${name}/secrets.yaml";
-    };
 
   mkNixosModules = import ./mkNixosModules.nix {
     inherit mkDefaultModules mkHomeModules mkSpecialArgs nixcfgs nixpkgs requireSops self;
@@ -170,7 +169,7 @@
       apply = args: (import (args.pkgs.input + "/nixos/lib/eval-config.nix") {
         inherit (args) lib system;
         specialArgs = mkSpecialArgs args;
-        modules = mkSharedModules "nixos" args ++ mkNixosModules args;
+        modules = mkNixosModules args;
       });
     };
 
@@ -234,13 +233,12 @@
             })
             ++ singleton {
               containers.${name} = mkMerge (
-                mkDefaultModules "container"
+                mkDefaultModules "container" name
                 ++ modules.container
                 ++ singleton {
                   specialArgs = mkSpecialArgs args;
                   config.imports =
-                    mkSharedModules "container" args
-                    ++ mkNixosModules (args // { modules = modules.nixos; })
+                    mkNixosModules (args // { modules = modules.nixos; })
                     ++ optional (applyArgs.home ? ${name}) {
                       systemd.services.fix-home-manager = {
                         serviceConfig = {
@@ -322,7 +320,7 @@
           nameValuePair "${name}_${username}" (inputs.home-manager.lib.homeManagerConfiguration {
             inherit pkgs;
             extraSpecialArgs = mkSpecialArgs args;
-            modules = mkSharedModules "home" args ++ mkHomeModules args username user;
+            modules = mkHomeModules args username user;
             check = true;
           }))
         users;

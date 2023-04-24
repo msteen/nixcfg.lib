@@ -37,7 +37,7 @@
     optionals
     ;
 in
-  mkDefaultModules "nixos"
+  mkDefaultModules "nixos" name
   ++ modules
   ++ optional requireSops inputs.sops-nix.nixosModules.sops
   ++ optionals (homeApplyArgs ? ${name}) (let

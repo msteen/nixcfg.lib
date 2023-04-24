@@ -4,6 +4,7 @@
   mkDefaultModules,
   requireSops,
 }: {
+  name,
   inputs,
   stateVersion,
   channels,
@@ -20,7 +21,7 @@
     singleton
     ;
 in
-  mkDefaultModules "home"
+  mkDefaultModules "home" name
   ++ optional requireSops inputs.sops-nix.homeManagerModules.sops
   ++ modules
   ++ singleton {
