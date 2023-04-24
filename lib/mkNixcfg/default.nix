@@ -36,7 +36,6 @@
     nameValuePair
     optional
     optionalAttrs
-    recursiveUpdate
     singleton
     ;
   inherit (nixcfg.lib)
@@ -67,7 +66,7 @@
       (groupBy (name: head (splitVersion name)) (attrNames inputs));
   in
     inputs
-    // optionalAttrs (!(inputs ? nixpkgs)) {
+    // optionalAttrs (!inputs ? nixpkgs) {
       nixpkgs = latestInputs.nixos or latestInputs.release or nixpkgs;
     };
 
@@ -373,7 +372,7 @@
   );
 
   applyArgs = mapAttrs (type: configurationsArgs:
-    recursiveUpdate configurationsArgs (mapAttrs (
+    updateLevels 1 configurationsArgs (mapAttrs (
         name: {
           system,
           channelName,
@@ -382,7 +381,7 @@
           inputs = inputsWithDefaultNixpkgs (nixcfgsInputs // rawArgs.inputs // configurationArgs.inputs);
           channels = (mkChannels (filterNixpkgsInputs inputs) [ system ]).${system} // nixcfgsChannels.${system};
           pkgs = channels.${channelName} or (throw "The ${type} nixpkgs channel '${channelName}' does not exist.");
-          unavailableInputs = filter (requiredInput: !(inputs ? ${requiredInput})) ((types.${type}.requiredInputs or [ ]) ++ optional requireSops "sops-nix");
+          unavailableInputs = filter (requiredInput: !inputs ? ${requiredInput}) ((types.${type}.requiredInputs or [ ]) ++ optional requireSops "sops-nix");
         in
           if unavailableInputs != [ ]
           then throw "The ${type} configuration '${name}' did not specify '${head unavailableInputs}' as part of their inputs."

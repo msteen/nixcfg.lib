@@ -38,6 +38,17 @@ in rec {
   concatAttrs = foldl' (a: b: a // b) { };
   concatAttrsRecursive = foldl' (a: b: recursiveUpdate a b) { };
 
+  updateLevels = levels: lhs: rhs: let
+    recur = levels:
+      zipAttrsWith (
+        _: values:
+          if levels == 0 || length values == 1 || !(isAttrs (elemAt values 1) && isAttrs (head values))
+          then head values
+          else recur (levels - 1) values
+      );
+  in
+    recur levels [ rhs lhs ];
+
   concatMapAttrsToList = f: attrs: concatLists (mapAttrsToList f attrs);
 
   mapToAttrs = f: list: listToAttrs (map f list);
