@@ -50,7 +50,6 @@
     maximum
     optionalAttr
     optionalInherit
-    traceJSONMap
     ;
 
   inherit (rawArgs.inputs) self;
@@ -62,14 +61,14 @@
       || hasPrefix "release-" name
   );
 
-  withDefaultNixpkgs = nixpkgsAttrs: hasNixpkgs: fallbackNixpkgs: let
-    latestNixpkgs =
-      mapAttrs (_: names: nixpkgsAttrs.${maximum compareVersions names})
-      (groupBy (name: head (splitVersion name)) (attrNames nixpkgsAttrs));
+  inputsWithDefaultNixpkgs = inputs: let
+    latestInputs =
+      mapAttrs (_: names: inputs.${maximum compareVersions names})
+      (groupBy (name: head (splitVersion name)) (attrNames inputs));
   in
-    nixpkgsAttrs
-    // optionalAttrs (!hasNixpkgs) {
-      nixpkgs = latestNixpkgs.nixos or latestNixpkgs.release or fallbackNixpkgs;
+    inputs
+    // optionalAttrs (!(inputs ? nixpkgs)) {
+      nixpkgs = latestInputs.nixos or latestInputs.release or nixpkgs;
     };
 
   systems = rawArgs.systems or [ "x86_64-linux" "aarch64-linux" ];
@@ -77,7 +76,7 @@
   nixcfgsData = import ./mkNixcfgs.nix { inherit nixcfg nixpkgs; } rawArgs.inputs;
   nixcfgs = nixcfgsData.list;
   nixcfgsInputs = concatAttrs (catAttrs "inputs" nixcfgs);
-  nixcfgsNixpkgsInputs = withDefaultNixpkgs (filterNixpkgsInputs nixcfgsInputs) (nixcfgsInputs ? nixpkgs) nixpkgs;
+  nixcfgsNixpkgsInputs = inputsWithDefaultNixpkgs (filterNixpkgsInputs nixcfgsInputs);
   nixcfgsChannels = mkChannels nixcfgsNixpkgsInputs systems;
   nixcfgsLib = let
     channelName = rawArgs.lib.channelName or "nixpkgs";
@@ -213,6 +212,7 @@
         name,
         inputs,
         system,
+        channelName,
         modules,
         lib,
         ...
@@ -221,36 +221,43 @@
       in
         inputs.extra-container.lib.buildContainers {
           inherit system;
-          # This potentially needs to be newer than the configured nixpkgs channel,
-          # due to `specialArgs` support being a very recent addition to NixOS containers.
-          # Rather than making it configurable seperately, we use the default behavior,
-          # of it defaulting to the nixpkgs input of `extra-container`.
-          # nixpkgs = pkgs.input;
-          config.containers.${name} = mkMerge (
-            mkDefaultModules "container"
-            ++ modules.container
+          nixpkgs = inputs.${channelName};
+          config.imports =
+            optional (compareVersions lib.trivial.release "23.05" < 0) (let
+              nixpkgs =
+                inputs.nixos-23_05
+                or inputs.nixos-unstable
+                or (throw ("To have similar module arguments within containers as in nixos we need special argument support."
+                    + " This support has only be added in nixpkgs 23.05, so the nixpkgs channel 'nixos-23_05' or 'nixos-unstable' is required."));
+            in {
+              disabledModules = [ "virtualisation/nixos-containers.nix" ];
+              imports = [ (nixpkgs.outPath + "/nixos/modules/virtualisation/nixos-containers.nix") ];
+            })
             ++ singleton {
-              specialArgs = mkSpecialArgs args;
-              config = {
-                imports =
-                  mkSharedModules "container" args
-                  ++ mkNixosModules (args // { modules = modules.nixos; })
-                  ++ optional (applyArgs.home ? ${name}) {
-                    systemd.services.fix-home-manager = {
-                      serviceConfig = {
-                        Type = "oneshot";
+              containers.${name} = mkMerge (
+                mkDefaultModules "container"
+                ++ modules.container
+                ++ singleton {
+                  specialArgs = mkSpecialArgs args;
+                  config.imports =
+                    mkSharedModules "container" args
+                    ++ mkNixosModules (args // { modules = modules.nixos; })
+                    ++ optional (applyArgs.home ? ${name}) {
+                      systemd.services.fix-home-manager = {
+                        serviceConfig = {
+                          Type = "oneshot";
+                        };
+                        script = concatStrings (mapAttrsToList (name: _: ''
+                            mkdir -p /nix/var/nix/{profiles,gcroots}/per-user/${name}
+                            chown ${name}:root /nix/var/nix/{profiles,gcroots}/per-user/${name}
+                          '')
+                          applyArgs.home.${name}.users);
+                        wantedBy = [ "multi-user.target" ];
                       };
-                      script = concatStrings (mapAttrsToList (name: _: ''
-                          mkdir -p /nix/var/nix/{profiles,gcroots}/per-user/${name}
-                          chown ${name}:root /nix/var/nix/{profiles,gcroots}/per-user/${name}
-                        '')
-                        applyArgs.home.${name}.users);
-                      wantedBy = [ "multi-user.target" ];
                     };
-                  };
-              };
-            }
-          );
+                }
+              );
+            };
         };
     };
 
@@ -372,12 +379,8 @@
           channelName,
           ...
         } @ configurationArgs: let
-          inputs = nixcfgsInputs // rawArgs.inputs // configurationArgs.inputs;
-          channels =
-            withDefaultNixpkgs
-            (recursiveUpdate (mkChannels (filterNixpkgsInputs inputs) [ system ]).${system} nixcfgsChannels.${system})
-            (inputs ? nixpkgs)
-            (mkChannels { inherit nixpkgs; } [ system ]).${system}.nixpkgs;
+          inputs = inputsWithDefaultNixpkgs (nixcfgsInputs // rawArgs.inputs // configurationArgs.inputs);
+          channels = (mkChannels (filterNixpkgsInputs inputs) [ system ]).${system} // nixcfgsChannels.${system};
           pkgs = channels.${channelName} or (throw "The ${type} nixpkgs channel '${channelName}' does not exist.");
           unavailableInputs = filter (requiredInput: !(inputs ? ${requiredInput})) ((types.${type}.requiredInputs or [ ]) ++ optional requireSops "sops-nix");
         in

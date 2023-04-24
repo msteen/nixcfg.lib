@@ -595,6 +595,21 @@
         self.nixosConfigurations.x86_64-linux.ubuntu.config.lib ? base;
       expected = true;
     };
+
+    testContainerNixpkgs = {
+      expr = let
+        self = mkNixcfg {
+          name = "example";
+          path = ./nixcfg;
+          inputs = {
+            inherit self;
+            inherit (inputs) extra-container;
+          };
+        };
+      in
+        fails (self.containerConfigurations.x86_64-linux ? hello);
+      expected = true;
+    };
   };
 in
   runTests tests
