@@ -415,8 +415,8 @@
     then throw "The overlay name 'default' is already reserved for the overlay defined in 'pkgs/overlay.nix'."
     else
       overlays
-      // optionalAttrs (self ? overlay) {
-        default = self.overlay;
+      // optionalAttrs (listedArgs ? overlay) {
+        default = listedArgs.overlay;
       };
 in
   {
