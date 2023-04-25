@@ -29,6 +29,7 @@
     concatStrings
     filterAttrs
     foldr
+    genAttrs
     getAttrs
     hasPrefix
     mapAttrs'
@@ -425,6 +426,7 @@ in
     data = mapAttrs (_: import) listedArgs.data // rawArgs.data or { };
     outPath = rawArgs.path;
     lib = nixcfgsLib;
+    formatter = genAttrs systems (system: nixcfg.inputs.alejandra.defaultPackage.${system});
   }
   # Nixpkgs overlays are required to be overlay functions, paths are not allowed.
   // mapAttrs (_: import) (optionalInherit listedArgs [ "libOverlay" "overlay" ])
