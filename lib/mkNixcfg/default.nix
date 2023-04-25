@@ -99,7 +99,7 @@
   mkDefaultModules = type: name:
     concatMap attrValues (catAttrs "${type}Modules" nixcfgs)
     ++ concatMap (optionalAttr "base") (catAttrs "${type}Profiles" nixcfgs)
-    ++ optional requireSops {
+    ++ optional (requireSops && type != "container") {
       sops.defaultSopsFile = self.outPath + "/${type}/configs/${name}/secrets.yaml";
     };
 
