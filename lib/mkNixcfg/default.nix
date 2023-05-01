@@ -104,7 +104,7 @@
       sops.defaultSopsFile = self.outPath + "/${type}/configs/${name}/secrets.yaml";
     };
 
-  mkSpecialArgs = {
+  mkSpecialArgs = type: {
     name,
     inputs,
     moduleArgs,
@@ -114,8 +114,12 @@
       # We cannot inherit name, as it will conflict with the workings of submodules.
       # It would for example lead to misconfiguring home manager.
       inherit inputs;
-      nixcfg = self;
-      nixcfgs = nixcfgsData.attrs;
+      nixcfg = {
+        inherit (rawArgs) name;
+        lib = nixcfgsLib;
+      };
+      data = mapAttrs (_: getAttr "data") nixcfgsData.attrs;
+      profiles = mapAttrs (_: getAttr "${type}Profiles") nixcfgsData.attrs;
     }
     // moduleArgs;
 
@@ -169,7 +173,7 @@
 
       apply = args: (import (args.pkgs.input + "/nixos/lib/eval-config.nix") {
         inherit (args) lib system;
-        specialArgs = mkSpecialArgs args;
+        specialArgs = mkSpecialArgs "nixos" args;
         modules = mkNixosModules args;
       });
     };
@@ -237,7 +241,7 @@
                 mkDefaultModules "container" name
                 ++ modules.container
                 ++ singleton {
-                  specialArgs = mkSpecialArgs args;
+                  specialArgs = mkSpecialArgs "nixos" args;
                   config.imports =
                     mkNixosModules (args // { modules = modules.nixos; })
                     ++ optional (applyArgs.home ? ${name}) {
@@ -320,7 +324,7 @@
         mapAttrsToList (username: user:
           nameValuePair "${name}_${username}" (inputs.home-manager.lib.homeManagerConfiguration {
             inherit pkgs;
-            extraSpecialArgs = mkSpecialArgs args;
+            extraSpecialArgs = mkSpecialArgs "home" args;
             modules = mkHomeModules args username user;
             check = true;
           }))

@@ -48,7 +48,7 @@ in
       home-manager = {
         useGlobalPkgs = true;
         useUserPackages = true;
-        extraSpecialArgs = mkSpecialArgs homeArgs;
+        extraSpecialArgs = mkSpecialArgs "home" homeArgs;
         users = mapAttrs (username: user: { imports = mkHomeModules homeArgs username user; }) homeArgs.users;
       };
 
