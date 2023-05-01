@@ -100,7 +100,7 @@
   mkDefaultModules = type: name:
     concatMap attrValues (catAttrs "${type}Modules" nixcfgs)
     ++ concatMap (optionalAttr "base") (catAttrs "${type}Profiles" nixcfgs)
-    ++ optional (requireSops && type != "container") {
+    ++ optional (requireSops && elem type [ "nixos" "home" ]) {
       sops.defaultSopsFile = self.outPath + "/${type}/configs/${name}/secrets.yaml";
     };
 
