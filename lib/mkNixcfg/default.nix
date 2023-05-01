@@ -220,7 +220,8 @@
         lib,
         ...
       } @ args: let
-        inherit (lib) mkMerge;
+        inherit (lib) mkMerge mkOption;
+        inherit (lib.types) attrsOf submoduleWith;
       in
         inputs.extra-container.lib.buildContainers {
           inherit system;
@@ -237,28 +238,33 @@
               imports = [ (nixpkgs.outPath + "/nixos/modules/virtualisation/nixos-containers.nix") ];
             })
             ++ singleton {
-              containers.${name} = mkMerge (
-                mkDefaultModules "container" name
-                ++ modules.container
-                ++ singleton {
-                  specialArgs = mkSpecialArgs "nixos" args;
-                  config.imports =
-                    mkNixosModules (args // { modules = modules.nixos; })
-                    ++ optional (applyArgs.home ? ${name}) {
-                      systemd.services.fix-home-manager = {
-                        serviceConfig = {
-                          Type = "oneshot";
-                        };
-                        script = concatStrings (mapAttrsToList (name: _: ''
-                            mkdir -p /nix/var/nix/{profiles,gcroots}/per-user/${name}
-                            chown ${name}:root /nix/var/nix/{profiles,gcroots}/per-user/${name}
-                          '')
-                          applyArgs.home.${name}.users);
-                        wantedBy = [ "multi-user.target" ];
+              options.containers = mkOption {
+                type = attrsOf (submoduleWith {
+                  shorthandOnlyDefinesConfig = true;
+                  modules =
+                    mkDefaultModules "container" name
+                    ++ modules.container;
+                  specialArgs = mkSpecialArgs "container" args;
+                });
+              };
+              config.containers.${name} = {
+                specialArgs = mkSpecialArgs "nixos" args;
+                config.imports =
+                  mkNixosModules (args // { modules = modules.nixos; })
+                  ++ optional (applyArgs.home ? ${name}) {
+                    systemd.services.fix-home-manager = {
+                      serviceConfig = {
+                        Type = "oneshot";
                       };
+                      script = concatStrings (mapAttrsToList (name: _: ''
+                          mkdir -p /nix/var/nix/{profiles,gcroots}/per-user/${name}
+                          chown ${name}:root /nix/var/nix/{profiles,gcroots}/per-user/${name}
+                        '')
+                        applyArgs.home.${name}.users);
+                      wantedBy = [ "multi-user.target" ];
                     };
-                }
-              );
+                  };
+              };
             };
         };
     };
