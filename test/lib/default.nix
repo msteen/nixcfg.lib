@@ -125,6 +125,7 @@
       expected = {
         libOverlay = ./nixcfg/lib/overlay.nix;
         nixosConfigurations = {
+          hello = ./nixcfg/nixos/configs/hello.nix;
           ubuntu = ./nixcfg/nixos/configs/ubuntu;
         };
         nixosModules = {
@@ -258,6 +259,14 @@
       in
         self.nixosConfigurationsArgs;
       expected = {
+        hello = {
+          channelName = "nixpkgs";
+          inputs = { };
+          moduleArgs = { };
+          modules = [ ./nixcfg/nixos/configs/hello.nix ];
+          stateVersion = "22.11";
+          system = "x86_64-linux";
+        };
         ubuntu = {
           channelName = "nixpkgs";
           inputs = { };
@@ -433,10 +442,7 @@
           channelName = "nixpkgs";
           inputs = { };
           moduleArgs = { };
-          modules = {
-            container = [ ./nixcfg/container/configs/hello/container.nix ];
-            nixos = [ ./nixcfg/container/configs/hello/nixos.nix ];
-          };
+          modules = [ ./nixcfg/container/configs/hello.nix ];
           stateVersion = "22.11";
           system = "x86_64-linux";
         };
@@ -507,7 +513,7 @@
       expected = true;
     };
 
-    testNixosContainerNoOverlap = {
+    testContainerNoNixos_1 = {
       expr = let
         self = mkNixcfg {
           name = "example";
@@ -517,11 +523,27 @@
             // {
               inherit self;
             };
-          nixosConfigurations.hello = { };
+          containerConfigurations.foo = { };
         };
       in
-        fails self.nixosConfigurationsArgs.hello;
+        fails self.containerConfigurationsArgs.foo;
       expected = true;
+    };
+
+    testContainerNoNixos_2 = {
+      expr = let
+        self = mkNixcfg {
+          name = "example";
+          path = ./nixcfg;
+          inputs =
+            inputs
+            // {
+              inherit self;
+            };
+        };
+      in
+        self.nixosConfigurations.x86_64-linux ? hello;
+      expected = false;
     };
 
     testNoConfigFile_1 = {

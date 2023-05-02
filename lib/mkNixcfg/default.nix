@@ -179,34 +179,17 @@
     };
 
     container = {
-      default = _:
-        default
-        // {
-          modules.nixos = [ ];
-          modules.container = [ ];
-        };
-
-      fromListed = mapToAttrs ({
-        name,
-        nameParts,
-        ...
-      }:
-        if length nameParts == 2 && elem (elemAt nameParts 1) [ "container" "nixos" ]
-        then nameValuePair (head nameParts) { }
-        else throw "The container configuration '${name}' should be in the root of 'container/configs/<name>' as '{container,nixos}.nix' or '{container,nixos}/default.nix'.");
+      default = _: default // { modules = [ ]; };
 
       extend = final: prev: name: {
-        modules.nixos = let
+        modules = let
           modules =
-            prev.${name}.modules.nixos
-            ++ optionalAttr "${name}_nixos" listedArgs.containerConfigurations;
+            prev.${name}.modules
+            ++ optionalAttr name listedArgs.containerConfigurations;
         in
           if modules == [ ]
-          then throw "The container configuration '${name}' should be in the root of 'container/configs/<name>' as 'nixos.nix' or 'nixos/default.nix'."
+          then throw "The container configuration '${name}' is missing in 'container/configs/'."
           else modules;
-        modules.container =
-          prev.${name}.modules.container
-          ++ optionalAttr "${name}_container" listedArgs.containerConfigurations;
       };
 
       requiredInputs = [ "extra-container" ];
@@ -243,14 +226,16 @@
                   shorthandOnlyDefinesConfig = true;
                   modules =
                     mkDefaultModules "container" name
-                    ++ modules.container;
+                    ++ modules;
                   specialArgs = mkSpecialArgs "container" args;
                 });
               };
-              config.containers.${name} = {
+              config.containers.${name} = let
+                args = applyArgs.nixos.${name};
+              in {
                 specialArgs = mkSpecialArgs "nixos" args;
                 config.imports =
-                  mkNixosModules (args // { modules = modules.nixos; })
+                  mkNixosModules args
                   ++ optional (applyArgs.home ? ${name}) {
                     systemd.services.fix-home-manager = {
                       serviceConfig = {
@@ -375,8 +360,8 @@
       configurationsArgs)
     types;
   in (
-    if intersectAttrs configurationsArgs.nixos configurationsArgs.container != { }
-    then throw "The names of nixos and container configurations are not allowed to overlap. This would make it ambiguous to which a home configuration should be added."
+    if length (attrNames (intersectAttrs configurationsArgs.container configurationsArgs.nixos)) != length (attrNames configurationsArgs.container)
+    then throw "For each container configuration there should be a corresponding nixos configuration."
     else configurationsArgs
   );
 
@@ -410,12 +395,16 @@
             or x.value.pkgs.system
             or (throw "The ${type} configuration is missing a system or pkgs attribute."))
           (concatMapAttrsToList (name: args: let
-            value = apply args;
-          in
-            if !(isList value)
-            then singleton (nameValuePair name value)
-            else value)
-          applyArgs.${type}))
+              value = apply args;
+            in
+              if !(isList value)
+              then singleton (nameValuePair name value)
+              else value)
+            (
+              if type == "nixos"
+              then removeAttrs applyArgs.nixos (attrNames applyArgs.container)
+              else applyArgs.${type}
+            )))
     )
     types;
 
