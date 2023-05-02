@@ -68,6 +68,29 @@
     inputs
     ;
 
+  exampleWith = attrs: let
+    self = mkNixcfg (let
+      attrs' =
+        {
+          name = "example";
+          path = ./nixcfg;
+          inherit inputs;
+        }
+        // attrs;
+    in
+      attrs'
+      // {
+        inputs =
+          attrs'.inputs
+          // {
+            inherit self;
+          };
+      });
+  in
+    self;
+
+  example = exampleWith { };
+
   fails = expr: !(tryEval (deepSeq expr expr)).success;
 
   tests = rec {
@@ -234,30 +257,12 @@
     };
 
     testRequiredInputHomeManager = {
-      expr = let
-        self = mkNixcfg {
-          name = "example";
-          path = ./nixcfg;
-          inputs = {
-            inherit self;
-          };
-        };
-      in
-        fails self.homeConfigurations;
+      expr = let example = exampleWith { inputs = { }; }; in fails example.homeConfigurations;
       expected = true;
     };
 
     testNixosConfigurationsArgs = {
-      expr = let
-        self = mkNixcfg {
-          name = "example";
-          path = ./nixcfg;
-          inputs = {
-            inherit self;
-          };
-        };
-      in
-        self.nixosConfigurationsArgs;
+      expr = example.nixosConfigurationsArgs;
       expected = {
         hello = {
           channelName = "nixpkgs";
@@ -280,18 +285,11 @@
 
     testHomeConfigurationsInputs = {
       expr = let
-        self = mkNixcfg {
-          name = "example";
-          path = ./nixcfg;
-          inputs = {
-            inherit self;
-          };
-          homeConfigurations.ubuntu.inputs = {
-            inherit (inputs) home-manager;
-          };
+        example = exampleWith {
+          homeConfigurations.ubuntu.inputs = { inherit (inputs) home-manager; };
         };
       in
-        self.homeConfigurationsArgs;
+        example.homeConfigurationsArgs;
       expected = {
         ubuntu = {
           channelName = "nixpkgs";
@@ -306,50 +304,30 @@
 
     testHomeInvalidOptions = {
       expr = let
-        self = mkNixcfg {
-          name = "example";
-          path = ./nixcfg;
-          inputs = {
-            inherit self;
-            inherit (inputs) home-manager;
-          };
+        example = exampleWith {
           homeConfigurations.ubuntu = {
             stateVersion = "21.11";
           };
         };
       in
-        fails self.homeConfigurationsArgs;
+        fails example.homeConfigurationsArgs;
       expected = true;
     };
 
     testNixcfgsLib_1 = {
       expr = let
-        self = mkNixcfg {
-          name = "example";
-          path = ./nixcfg;
-          inputs = {
-            inherit self;
-            inherit (inputs) home-manager;
-          };
-        };
-        inherit (self) lib;
+        inherit (example) lib;
       in
-        (lib.lib.input.outPath or null) == nixpkgs.outPath && lib ? mkNixcfg;
+        (lib.lib.input.outPath or null) == inputs.nixpkgs.outPath && lib ? mkNixcfg;
       expected = true;
     };
 
     testNixcfgsLib_2 = {
       expr = let
-        self = mkNixcfg {
-          name = "example";
-          path = ./nixcfg;
-          inputs = {
-            inherit self;
-            inherit (inputs) home-manager;
-          };
+        example = exampleWith {
           lib.channelName = "foo";
         };
-        inherit (self) lib;
+        inherit (example) lib;
       in
         fails (lib.lib ? input);
       expected = true;
@@ -357,44 +335,20 @@
 
     testNixcfgsLib_3 = {
       expr = let
-        self = mkNixcfg {
-          name = "example";
-          path = ./nixcfg;
-          inputs = {
-            inherit self;
-            inherit (inputs) home-manager;
-          };
-        };
-        inherit (self) lib;
+        inherit (example) lib;
       in
         lib.overlay or null == true;
       expected = true;
     };
 
     testNixosConfigurations = {
-      expr = let
-        self = mkNixcfg {
-          name = "example";
-          path = ./nixcfg;
-          inputs = {
-            inherit self;
-            inherit (inputs) home-manager nixpkgs;
-          };
-        };
-      in
-        self.nixosConfigurations.x86_64-linux.ubuntu.config.system.build ? toplevel;
+      expr = example.nixosConfigurations.x86_64-linux.ubuntu.config.system.build ? toplevel;
       expected = true;
     };
 
     testChannels_1 = {
       expr = let
-        self = mkNixcfg {
-          name = "example";
-          path = ./nixcfg;
-          inputs = {
-            inherit self;
-            inherit (inputs) home-manager nixpkgs;
-          };
+        example = exampleWith {
           channels.nixpkgs2 = {
             input = inputs.nixpkgs;
             overlays = [ (final: prev: { overlay2 = true; }) ];
@@ -403,40 +357,24 @@
           homeConfigurations.ubuntu.channelName = "nixpkgs2";
         };
       in
-        self.nixosConfigurations.x86_64-linux.ubuntu.pkgs ? overlay2;
+        example.nixosConfigurations.x86_64-linux.ubuntu.pkgs ? overlay2;
       expected = true;
     };
 
     testChannels_2 = {
       expr = let
-        self = mkNixcfg {
-          name = "example";
-          path = ./nixcfg;
-          inputs = {
-            inherit self;
-            inherit (inputs) home-manager nixpkgs;
-          };
+        example = exampleWith {
           channels.nixpkgs = {
             config = { allowUnfree = false; };
           };
         };
       in
-        fails self.nixosConfigurations.x86_64-linux.ubuntu.pkgs.vscode.outPath;
+        fails example.nixosConfigurations.x86_64-linux.ubuntu.pkgs.vscode.outPath;
       expected = true;
     };
 
     testContainerConfigurationsArgs = {
-      expr = let
-        self = mkNixcfg {
-          name = "example";
-          path = ./nixcfg;
-          inputs = {
-            inherit self;
-            inherit (inputs) extra-container;
-          };
-        };
-      in
-        self.containerConfigurationsArgs;
+      expr = example.containerConfigurationsArgs;
       expected = {
         hello = {
           channelName = "nixpkgs";
@@ -451,204 +389,126 @@
 
     testInvalidConfigurationSystem = {
       expr = let
-        self = mkNixcfg {
-          name = "example";
-          path = ./nixcfg;
-          inputs = {
-            inherit self;
-          };
+        example = exampleWith {
           systems = [ "aarch64-linux" ];
           nixosConfigurations.ubuntu.system = "x86_64-linux";
         };
       in
-        fails self.nixosConfigurationsArgs.ubuntu;
+        fails example.nixosConfigurationsArgs.ubuntu;
       expected = true;
     };
 
     testHomeConfigurations = {
-      expr = let
-        self = mkNixcfg {
-          name = "example";
-          path = ./nixcfg;
-          inputs =
-            inputs
-            // {
-              inherit self;
-            };
-        };
-      in
-        self.homeConfigurations.x86_64-linux.ubuntu_matthijs ? activationPackage;
+      expr = example.homeConfigurations.x86_64-linux.ubuntu_matthijs ? activationPackage;
       expected = true;
     };
 
     testDefaultNixpkgs_1 = {
-      expr = let
-        self = mkNixcfg {
-          name = "example";
-          path = ./nixcfg;
-          inputs = {
-            inherit self;
-            inherit (inputs) home-manager;
-          };
-        };
-      in
-        self.homeConfigurations.x86_64-linux.ubuntu_matthijs.pkgs.input.outPath == nixpkgs.outPath;
+      expr = example.homeConfigurations.x86_64-linux.ubuntu_matthijs.pkgs.input.outPath == inputs.nixpkgs.outPath;
       expected = true;
     };
 
     testDefaultNixpkgs_2 = {
       expr = let
-        nixos-22_11 = inputs.nixos-unstable;
-        self = mkNixcfg {
-          name = "example";
-          path = ./nixcfg;
-          inputs = {
-            inherit nixos-22_11 self;
-            inherit (inputs) home-manager;
-          };
+        example = exampleWith {
+          inputs = removeAttrs inputs [ "nixpkgs" ];
         };
-        nixpkgsOutPath = self.homeConfigurations.x86_64-linux.ubuntu_matthijs.pkgs.input.outPath;
+        nixpkgsOutPath = example.homeConfigurations.x86_64-linux.ubuntu_matthijs.pkgs.input.outPath;
+      in {
+        isStableNixpkgs = nixpkgsOutPath == inputs.nixos-22_11.outPath;
+        isNixcfgNixpkgs = nixpkgsOutPath == nixpkgs.outPath;
+      };
+      expected = {
+        isStableNixpkgs = true;
+        isNixcfgNixpkgs = false;
+      };
+    };
+
+    testDefaultNixpkgs_3 = {
+      expr = let
+        example = exampleWith {
+          inputs = removeAttrs inputs [ "nixpkgs" "nixos-22_11" "nixos-unstable" ];
+        };
+        nixpkgsOutPath = example.homeConfigurations.x86_64-linux.ubuntu_matthijs.pkgs.input.outPath;
       in
-        nixpkgsOutPath == nixos-22_11.outPath && nixpkgsOutPath != nixpkgs.outPath;
+        nixpkgsOutPath == nixpkgs.outPath;
       expected = true;
     };
 
     testContainerNoNixos_1 = {
       expr = let
-        self = mkNixcfg {
-          name = "example";
-          path = ./nixcfg;
-          inputs =
-            inputs
-            // {
-              inherit self;
-            };
+        example = exampleWith {
           containerConfigurations.foo = { };
         };
       in
-        fails self.containerConfigurationsArgs.foo;
+        fails example.containerConfigurationsArgs.foo;
       expected = true;
     };
 
     testContainerNoNixos_2 = {
-      expr = let
-        self = mkNixcfg {
-          name = "example";
-          path = ./nixcfg;
-          inputs =
-            inputs
-            // {
-              inherit self;
-            };
-        };
-      in
-        self.nixosConfigurations.x86_64-linux ? hello;
+      expr = example.nixosConfigurations.x86_64-linux ? hello;
       expected = false;
     };
 
     testNoConfigFile_1 = {
       expr = let
-        self = mkNixcfg {
-          name = "example";
-          path = ./nixcfg;
-          inputs =
-            inputs
-            // {
-              inherit self;
-            };
+        example = exampleWith {
           nixosConfigurations.nofile = { };
         };
       in
-        fails self.nixosConfigurationsArgs.nofile;
+        fails example.nixosConfigurationsArgs.nofile;
       expected = true;
     };
 
     testNoConfigFile_2 = {
       expr = let
-        self = mkNixcfg {
-          name = "example";
-          path = ./nixcfg;
-          inputs =
-            inputs
-            // {
-              inherit self;
-            };
+        example = exampleWith {
           nixosConfigurations.nofile = {
             modules = [ { } ];
           };
         };
       in
-        self.nixosConfigurations.x86_64-linux ? nofile;
+        example.nixosConfigurations.x86_64-linux ? nofile;
       expected = true;
     };
 
     testOverlays = {
       expr = let
-        self = mkNixcfg {
-          name = "example";
-          path = ./nixcfg;
-          inputs =
-            inputs
-            // {
-              inherit self;
-            };
+        example = exampleWith {
           overlays = { foo = final: prev: { overlay = true; }; };
           channels.nixpkgs = {
             overlays = overlays: [ overlays.example.foo ];
           };
         };
       in
-        self.nixosConfigurations.x86_64-linux.ubuntu.pkgs ? overlay;
+        example.nixosConfigurations.x86_64-linux.ubuntu.pkgs ? overlay;
       expected = true;
     };
 
     testBaseProfile = {
-      expr = let
-        self = mkNixcfg {
-          name = "example";
-          path = ./nixcfg;
-          inputs =
-            inputs
-            // {
-              inherit self;
-            };
-        };
-      in
-        self.nixosConfigurations.x86_64-linux.ubuntu.config.lib ? base;
+      expr = example.nixosConfigurations.x86_64-linux.ubuntu.config.lib ? base;
       expected = true;
     };
 
     testContainerNixpkgs = {
       expr = let
-        self = mkNixcfg {
-          name = "example";
-          path = ./nixcfg;
-          inputs = {
-            inherit self;
-            inherit (inputs) extra-container;
-          };
+        example = exampleWith {
+          inputs = removeAttrs inputs [ "nixos-unstable" ];
         };
       in
-        fails (self.containerConfigurations.x86_64-linux ? hello);
+        fails (example.containerConfigurations.x86_64-linux ? hello);
       expected = true;
     };
 
     testInputsPrime = {
       expr = let
-        self = mkNixcfg {
-          name = "example";
-          path = ./nixcfg;
-          inputs =
-            inputs
-            // {
-              inherit self;
-            };
+        example = exampleWith {
           nixosConfigurations.ubuntu.modules = [
             ({ inputs', ... }: { lib.tests.test = inputs' ? nixpkgs.legacyPackages.hello; })
           ];
         };
       in
-        self.nixosConfigurations.x86_64-linux.ubuntu.config.lib.tests.test;
+        example.nixosConfigurations.x86_64-linux.ubuntu.config.lib.tests.test;
       expected = true;
     };
   };

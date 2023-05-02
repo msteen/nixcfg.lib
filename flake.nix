@@ -2,7 +2,7 @@
   description = "NixOS configuration library";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/e2c97799da5f5cd87adfa5017fba971771e123ef";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-22.11";
 
     alejandra.url = "github:msteen/alejandra";
     alejandra.inputs.nixpkgs.follows = "nixpkgs";
