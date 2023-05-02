@@ -101,6 +101,7 @@
   in
     nixcfgsNixpkgsInputs.${channelName}
     or (throw "The lib nixpkgs channel '${channelName}' does not exist.");
+  lib = nixcfgsLib // libNixpkgs.lib // builtins;
 
   mkChannels = import ./mkChannels.nix {
     inherit nixpkgs;
@@ -131,6 +132,10 @@
       };
       data = mapAttrs (_: getAttr "data") nixcfgsData.attrs;
       profiles = mapAttrs (_: getAttr "${type}Profiles") nixcfgsData.attrs;
+    }
+    # Home Manager extends NixOS's lib, which we would overwrite with our own lib.
+    // optionalAttrs (!(type == "home" && applyArgs.nixos ? ${name})) {
+      inherit lib;
     }
     // moduleArgs;
 
@@ -447,11 +452,10 @@
     };
 in
   {
-    inherit nixcfgs overlays;
+    inherit lib nixcfgs overlays;
     inherit (rawArgs) inputs name;
     data = mapAttrs (_: import) listedArgs.data // rawArgs.data or { };
     outPath = rawArgs.path;
-    lib = nixcfgsLib;
     formatter = genAttrs systems (system: nixcfg.inputs.alejandra.defaultPackage.${system});
   }
   // overlayOutputs
