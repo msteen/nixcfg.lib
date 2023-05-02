@@ -16,6 +16,7 @@
     head
     intersectAttrs
     isAttrs
+    isFunction
     isList
     isString
     length
@@ -93,17 +94,13 @@
   nixcfgsInputs = concatAttrs (catAttrs "inputs" nixcfgs);
   nixcfgsNixpkgsInputs = inputsWithDefaultNixpkgs (filterNixpkgsInputs nixcfgsInputs);
   nixcfgsChannels = mkChannels nixcfgsNixpkgsInputs systems;
-  nixcfgsLib = let
+  nixcfgsLib = extendsList (catAttrs "libOverlay" nixcfgs) (final: nixcfg.lib);
+
+  libNixpkgs = let
     channelName = rawArgs.lib.channelName or "nixpkgs";
-    input =
-      nixcfgsNixpkgsInputs.${channelName}
-      or (throw "The lib nixpkgs channel '${channelName}' does not exist.");
   in
-    extendsList (catAttrs "libOverlay" nixcfgs) (final:
-      nixcfg.lib
-      // {
-        lib = input.lib // { inherit input; };
-      });
+    nixcfgsNixpkgsInputs.${channelName}
+    or (throw "The lib nixpkgs channel '${channelName}' does not exist.");
 
   mkChannels = import ./mkChannels.nix {
     inherit nixpkgs;
@@ -433,6 +430,21 @@
       // optionalAttrs (listedArgs ? overlay) {
         default = listedArgs.overlay;
       };
+
+  overlayOutputs = let
+    # Nixpkgs overlays are required to be overlay functions, paths are not allowed.
+    overlayOutputs = mapAttrs (_: import) (optionalInherit listedArgs [ "libOverlay" "overlay" ]);
+    nixpkgsLibOverlay = { lib = libNixpkgs.lib // { input = libNixpkgs; }; };
+  in
+    overlayOutputs
+    // optionalAttrs (overlayOutputs ? libOverlay) {
+      libOverlay = let
+        inherit (overlayOutputs) libOverlay;
+      in
+        if isFunction libOverlay
+        then final: prev: libOverlay final prev // nixpkgsLibOverlay
+        else libOverlay // nixpkgsLibOverlay;
+    };
 in
   {
     inherit nixcfgs overlays;
@@ -442,8 +454,7 @@ in
     lib = nixcfgsLib;
     formatter = genAttrs systems (system: nixcfg.inputs.alejandra.defaultPackage.${system});
   }
-  # Nixpkgs overlays are required to be overlay functions, paths are not allowed.
-  // mapAttrs (_: import) (optionalInherit listedArgs [ "libOverlay" "overlay" ])
+  // overlayOutputs
   // getAttrs (concatMap (type: [ "${type}Modules" "${type}Profiles" ]) (attrNames types)) listedArgs
   // mapAttrs' (type: nameValuePair "${type}ConfigurationsArgs") configurationsArgs
   // mapAttrs' (type: nameValuePair "${type}Configurations") configurations
