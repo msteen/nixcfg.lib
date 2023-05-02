@@ -632,6 +632,25 @@
         fails (self.containerConfigurations.x86_64-linux ? hello);
       expected = true;
     };
+
+    testInputsPrime = {
+      expr = let
+        self = mkNixcfg {
+          name = "example";
+          path = ./nixcfg;
+          inputs =
+            inputs
+            // {
+              inherit self;
+            };
+          nixosConfigurations.ubuntu.modules = [
+            ({ inputs', ... }: { lib.tests.test = inputs' ? nixpkgs.legacyPackages.hello; })
+          ];
+        };
+      in
+        self.nixosConfigurations.x86_64-linux.ubuntu.config.lib.tests.test;
+      expected = true;
+    };
   };
 in
   runTests tests

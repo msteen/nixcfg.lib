@@ -26,6 +26,7 @@
     hasPrefix
     hasSuffix
     mapAttrsToList
+    nameValuePair
     recursiveUpdate
     removeSuffix
     singleton
@@ -77,6 +78,13 @@ in rec {
       ]
       else [ ])
     names);
+
+  attrsGetAttr = name: attrs:
+    listToAttrs (concatMapAttrsToList (n: v:
+      if v ? ${name}
+      then [ (nameValuePair n v.${name}) ]
+      else [ ])
+    attrs);
 
   applyAttrs = let
     recurDefault = lhs:

@@ -41,6 +41,7 @@
     ;
   inherit (nixcfg.lib)
     applyAttrs
+    attrsGetAttr
     concatAttrs
     concatMapAttrsToList
     defaultUpdateExtend
@@ -52,6 +53,19 @@
     optionalInherit
     updateLevels
     ;
+
+  flakeSystemAttrs = genAttrs [
+    "checks"
+    "packages"
+    "packages"
+    "apps"
+    "formatter"
+    "legacyPackages"
+    "nixosConfigurations"
+    "containerConfigurations"
+    "homeConfigurations"
+    "devShells"
+  ] (_: null);
 
   inherit (rawArgs.inputs) self;
 
@@ -106,14 +120,14 @@
 
   mkSpecialArgs = type: {
     name,
-    inputs,
+    inputs',
     moduleArgs,
     ...
   }:
     {
       # We cannot inherit name, as it will conflict with the workings of submodules.
       # It would for example lead to misconfiguring home manager.
-      inherit inputs;
+      inherit inputs';
       nixcfg = {
         inherit (rawArgs) name;
         lib = nixcfgsLib;
@@ -373,6 +387,7 @@
           ...
         } @ configurationArgs: let
           inputs = inputsWithDefaultNixpkgs (nixcfgsInputs // rawArgs.inputs // configurationArgs.inputs);
+          inputs' = mapAttrs (_: flake: flake // attrsGetAttr system (intersectAttrs flakeSystemAttrs flake)) inputs;
           channels = (mkChannels (filterNixpkgsInputs inputs) [ system ]).${system} // nixcfgsChannels.${system};
           pkgs = channels.${channelName} or (throw "The ${type} nixpkgs channel '${channelName}' does not exist.");
           unavailableInputs = filter (requiredInput: !inputs ? ${requiredInput}) ((types.${type}.requiredInputs or [ ]) ++ optional requireSops "sops-nix");
@@ -380,7 +395,7 @@
           if unavailableInputs != [ ]
           then throw "The ${type} configuration '${name}' did not specify '${head unavailableInputs}' as part of their inputs."
           else {
-            inherit channels inputs name pkgs;
+            inherit channels inputs inputs' name pkgs;
             inherit (pkgs) lib;
           }
       )
