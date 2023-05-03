@@ -34,27 +34,19 @@
     list;
 
   optionalAttr = name: attrs:
-    if attrs ? ${name}
-    then [ attrs.${name} ]
-    else [ ];
+    lib.optional (attrs ? ${name}) attrs.${name};
 
   optionalInherit = attrs: names:
     lib.listToAttrs (lib.concatMap (name:
-      if attrs ? ${name}
-      then [
-        {
-          inherit name;
-          value = attrs.${name};
-        }
-      ]
-      else [ ])
+      lib.optional (attrs ? ${name}) {
+        inherit name;
+        value = attrs.${name};
+      })
     names);
 
   attrsGetAttr = name: attrs:
     lib.listToAttrs (lib.concatMapAttrsToList (n: v:
-      if v ? ${name}
-      then [ (lib.nameValuePair n v.${name}) ]
-      else [ ])
+      lib.optional (v ? ${name}) (lib.nameValuePair n v.${name}))
     attrs);
 
   applyAttrs = let
@@ -115,20 +107,12 @@
           then let
             listing = lib.readDir path;
           in
-            lib.singleton {
-              inherit name;
-              value =
-                if listing."default.nix" or null == "regular"
-                then path
-                else recur path listing;
-            }
-          else if lib.hasSuffix ".nix" name
-          then
-            lib.singleton {
-              name = lib.removeSuffix ".nix" name;
-              value = path;
-            }
-          else [ ]
+            lib.singleton (lib.nameValuePair name (
+              if listing."default.nix" or null == "regular"
+              then path
+              else recur path listing
+            ))
+          else lib.optional (lib.hasSuffix ".nix" name) (lib.nameValuePair (lib.removeSuffix ".nix" name) path)
       ) (lib.attrNames listing));
   in
     dir: recur dir (lib.readDir dir);
