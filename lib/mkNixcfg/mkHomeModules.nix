@@ -1,5 +1,5 @@
 {
-  nixpkgs,
+  lib,
   nixcfgs,
   mkDefaultModules,
   requireSops,
@@ -12,20 +12,12 @@
 }: username: {
   homeDirectory,
   modules,
-}: let
-  inherit (builtins)
-    catAttrs
-    ;
-  inherit (nixpkgs.lib)
-    optional
-    singleton
-    ;
-in
-  mkDefaultModules "home" name
-  ++ optional requireSops inputs.sops-nix.homeManagerModules.sops
-  ++ modules
-  ++ singleton {
-    nixpkgs.overlays = [ (final: prev: channels) ] ++ catAttrs "overlay" nixcfgs;
-    home = { inherit homeDirectory stateVersion username; };
-    programs.home-manager.enable = true;
-  }
+}:
+mkDefaultModules "home" name
+++ lib.optional requireSops inputs.sops-nix.homeManagerModules.sops
+++ modules
+++ lib.singleton {
+  nixpkgs.overlays = [ (final: prev: channels) ] ++ lib.catAttrs "overlay" nixcfgs;
+  home = { inherit homeDirectory stateVersion username; };
+  programs.home-manager.enable = true;
+}

@@ -1,61 +1,32 @@
 {
+  lib,
   nixpkgs,
   nixcfg,
-}: let
-  inherit (builtins)
-    attrNames
-    concatLists
-    concatMap
-    concatStringsSep
-    elemAt
-    foldl'
-    head
-    isAttrs
-    isFunction
-    length
-    listToAttrs
-    mapAttrs
-    readDir
-    zipAttrsWith
-    ;
-  inherit (nixpkgs.lib)
-    const
-    extends
-    fix
-    flip
-    hasPrefix
-    hasSuffix
-    mapAttrsToList
-    nameValuePair
-    recursiveUpdate
-    removeSuffix
-    singleton
-    ;
-in rec {
-  traceJSON = x: builtins.trace (builtins.toJSON x) x;
-  traceJSONMap = f: x: builtins.trace (builtins.toJSON (f x)) x;
-  traceJSONValue = value: traceJSONMap (const value);
+}: {
+  traceJSON = x: lib.trace (lib.toJSON x) x;
+  traceJSONMap = f: x: lib.trace (lib.toJSON (f x)) x;
+  traceJSONValue = value: lib.traceJSONMap (lib.const value);
 
-  concatAttrs = foldl' (a: b: a // b) { };
-  concatAttrsRecursive = foldl' (a: b: recursiveUpdate a b) { };
+  concatAttrs = lib.foldl' (a: b: a // b) { };
+  concatAttrsRecursive = lib.foldl' (a: b: lib.recursiveUpdate a b) { };
 
   updateLevels = levels: lhs: rhs: let
     recur = levels:
-      zipAttrsWith (
+      lib.zipAttrsWith (
         _: values:
-          if levels == 0 || length values == 1 || !(isAttrs (elemAt values 1) && isAttrs (head values))
-          then head values
+          if levels == 0 || lib.length values == 1 || !(lib.isAttrs (lib.elemAt values 1) && lib.isAttrs (lib.head values))
+          then lib.head values
           else recur (levels - 1) values
       );
   in
     recur levels [ rhs lhs ];
 
-  concatMapAttrsToList = f: attrs: concatLists (mapAttrsToList f attrs);
+  concatMapAttrsToList = f: attrs: lib.concatLists (lib.mapAttrsToList f attrs);
 
-  mapToAttrs = f: list: listToAttrs (map f list);
+  mapToAttrs = f: list: lib.listToAttrs (map f list);
 
   maximum = compare: list:
-    foldl' (a: b:
+    lib.foldl' (a: b:
       if a == null || compare a b < 1
       then b
       else a)
@@ -68,7 +39,7 @@ in rec {
     else [ ];
 
   optionalInherit = attrs: names:
-    listToAttrs (concatMap (name:
+    lib.listToAttrs (lib.concatMap (name:
       if attrs ? ${name}
       then [
         {
@@ -80,27 +51,27 @@ in rec {
     names);
 
   attrsGetAttr = name: attrs:
-    listToAttrs (concatMapAttrsToList (n: v:
+    lib.listToAttrs (lib.concatMapAttrsToList (n: v:
       if v ? ${name}
-      then [ (nameValuePair n v.${name}) ]
+      then [ (lib.nameValuePair n v.${name}) ]
       else [ ])
     attrs);
 
   applyAttrs = let
     recurDefault = lhs:
-      if isAttrs lhs
-      then mapAttrs (_: recurDefault) lhs
-      else if isFunction lhs
+      if lib.isAttrs lhs
+      then lib.mapAttrs (_: recurDefault) lhs
+      else if lib.isFunction lhs
       then { }
       else lhs;
     recur = lhs: rhs:
-      if !(isAttrs rhs)
+      if !(lib.isAttrs rhs)
       then recurDefault lhs
-      else if isFunction lhs
-      then mapAttrs (name: recur (lhs name)) rhs
-      else if isAttrs lhs
+      else if lib.isFunction lhs
+      then lib.mapAttrs (name: recur (lhs name)) rhs
+      else if lib.isAttrs lhs
       then
-        mapAttrs (name: lhs:
+        lib.mapAttrs (name: lhs:
           if rhs ? ${name}
           then recur lhs rhs.${name}
           else recurDefault lhs)
@@ -111,60 +82,60 @@ in rec {
 
   flattenAttrs = sep: let
     recur = acc: path: attrs:
-      foldl' (
+      lib.foldl' (
         acc: name: let
           path' = path ++ [ name ];
           value = attrs.${name};
         in
-          if isAttrs value && value.type or null != "derivation" && value.recurseForDerivations or null != false
+          if lib.isAttrs value && value.type or null != "derivation" && value.recurseForDerivations or null != false
           then recur acc path' (removeAttrs value [ "recurseForDerivations" ])
-          else acc // { ${concatStringsSep sep path'} = value; }
+          else acc // { ${lib.concatStringsSep sep path'} = value; }
       )
-      acc (attrNames attrs);
+      acc (lib.attrNames attrs);
   in
     attrs: recur { } [ ] attrs;
 
-  flattenInheritAttrs = flattenAttrs "_";
+  flattenInheritAttrs = lib.flattenAttrs "_";
 
-  extendsList = overlays: initial: fix (foldl' (flip extends) initial overlays);
+  extendsList = overlays: initial: lib.fix (lib.foldl' (lib.flip lib.extends) initial overlays);
 
   defaultUpdateExtend = defaultAttrs: attrs: updater: let
-    prev = recursiveUpdate (applyAttrs defaultAttrs attrs) attrs;
-    final = let rhs = updater final prev; in recursiveUpdate prev (applyAttrs rhs prev);
+    prev = lib.recursiveUpdate (lib.applyAttrs defaultAttrs attrs) attrs;
+    final = let rhs = updater final prev; in lib.recursiveUpdate prev (lib.applyAttrs rhs prev);
   in
     final;
 
   listNixTree = let
     recur = dir: listing:
-      listToAttrs (concatMap (
+      lib.listToAttrs (lib.concatMap (
         name: let
           path = dir + "/${name}";
         in
           if listing.${name} == "directory"
           then let
-            listing = readDir path;
+            listing = lib.readDir path;
           in
-            singleton {
+            lib.singleton {
               inherit name;
               value =
                 if listing."default.nix" or null == "regular"
                 then path
                 else recur path listing;
             }
-          else if hasSuffix ".nix" name
+          else if lib.hasSuffix ".nix" name
           then
-            singleton {
-              name = removeSuffix ".nix" name;
+            lib.singleton {
+              name = lib.removeSuffix ".nix" name;
               value = path;
             }
           else [ ]
-      ) (attrNames listing));
+      ) (lib.attrNames listing));
   in
-    dir: recur dir (readDir dir);
+    dir: recur dir (lib.readDir dir);
 
-  listAttrs = import ./listAttrs.nix { inherit nixcfg nixpkgs; };
+  listAttrs = import ./listAttrs.nix { inherit lib; };
 
-  mkNixcfg = import ./mkNixcfg { inherit nixcfg nixpkgs; };
+  mkNixcfg = import ./mkNixcfg { inherit lib nixcfg nixpkgs; };
 
   dummyNixosModule = {
     boot.loader.grub.enable = false;

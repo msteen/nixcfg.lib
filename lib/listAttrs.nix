@@ -1,25 +1,6 @@
-{
-  nixpkgs,
-  nixcfg,
-}: let
-  inherit (builtins)
-    attrNames
-    concatMap
-    isAttrs
-    listToAttrs
-    readDir
-    ;
-  inherit (nixpkgs.lib)
-    hasInfix
-    singleton
-    ;
-  inherit (nixcfg.lib)
-    flattenInheritAttrs
-    listNixTree
-    ;
-
+{ lib }: let
   nameToType = name:
-    if hasInfix "." name
+    if lib.hasInfix "." name
     then "regular"
     else "directory";
 
@@ -27,47 +8,47 @@
     if type == "regular"
     then [ ]
     else
-      singleton {
+      lib.singleton {
         inherit name;
         value = { };
       };
 
   recurDefault = tree:
-    concatMap (
+    lib.concatMap (
       name: let
         value = tree.${name};
       in
-        if isAttrs value
+        if lib.isAttrs value
         then recurDefault value
         else listAttrDefault value (nameToType name)
-    ) (attrNames tree);
+    ) (lib.attrNames tree);
 in
   path: tree: let
     recur = path: tree: let
-      listing = readDir path;
+      listing = lib.readDir path;
     in
-      concatMap (
+      lib.concatMap (
         filename: let
           name = tree.${filename};
           treeType = nameToType filename;
           listedType = listing.${filename} or null;
           path' = path + "/${filename}";
         in
-          if isAttrs name
+          if lib.isAttrs name
           then
             if listedType == "directory"
             then recur path' name
             else recurDefault name
           else if listedType == treeType
           then
-            singleton {
+            lib.singleton {
               inherit name;
               value =
                 if listedType == "regular"
                 then path'
-                else flattenInheritAttrs (listNixTree path');
+                else lib.flattenInheritAttrs (lib.listNixTree path');
             }
           else listAttrDefault name treeType
-      ) (attrNames tree);
+      ) (lib.attrNames tree);
   in
-    listToAttrs (recur path tree)
+    lib.listToAttrs (recur path tree)

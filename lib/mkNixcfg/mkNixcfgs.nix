@@ -1,28 +1,8 @@
-{
-  nixpkgs,
-  nixcfg,
-}: let
-  inherit (builtins)
-    attrValues
-    catAttrs
-    concatLists
-    ;
-  inherit (nixpkgs.lib)
-    attrVals
-    filterAttrs
-    hasPrefix
-    nameValuePair
-    unique
-    ;
-  inherit (nixcfg.lib)
-    mapToAttrs
-    ;
-in
-  inputs: let
-    inherit (inputs) self;
-    nixcfgInputs = attrValues (filterAttrs (name: _: hasPrefix "nixcfg-" name) inputs);
-    nixcfgs = concatLists (catAttrs "nixcfgs" nixcfgInputs) ++ [ self ];
-  in rec {
-    attrs = mapToAttrs (nixcfg: nameValuePair nixcfg.name nixcfg) nixcfgs;
-    list = attrVals (unique (catAttrs "name" nixcfgs)) attrs;
-  }
+{ lib }: inputs: let
+  inherit (inputs) self;
+  nixcfgInputs = lib.attrValues (lib.filterAttrs (name: _: lib.hasPrefix "nixcfg-" name) inputs);
+  nixcfgs = lib.concatLists (lib.catAttrs "nixcfgs" nixcfgInputs) ++ [ self ];
+in rec {
+  attrs = lib.mapToAttrs (nixcfg: lib.nameValuePair nixcfg.name nixcfg) nixcfgs;
+  list = lib.attrVals (lib.unique (lib.catAttrs "name" nixcfgs)) attrs;
+}

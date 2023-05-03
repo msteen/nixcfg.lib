@@ -1,39 +1,13 @@
 {
+  lib,
   nixpkgs,
-  nixcfg,
 }: let
-  inherit (builtins)
-    all
-    attrValues
-    catAttrs
-    deepSeq
-    fromJSON
-    getFlake
-    mapAttrs
-    readFile
-    trace
-    tryEval
-    ;
-  inherit (nixpkgs.lib)
-    runTests
-    ;
-  inherit (nixcfg.lib)
-    applyAttrs
-    concatAttrs
-    concatAttrsRecursive
-    defaultUpdateExtend
-    dummyNixosModule
-    extendsList
-    listAttrs
-    mkNixcfg
-    ;
-
-  foo = mkNixcfg {
+  foo = lib.mkNixcfg {
     name = "foo";
     path = ./nixcfg-foo;
     inputs = { self = foo; };
   };
-  bar = mkNixcfg {
+  bar = lib.mkNixcfg {
     name = "bar";
     path = ./nixcfg-bar;
     inputs = {
@@ -41,7 +15,7 @@
       nixcfg-foo = foo;
     };
   };
-  baz = mkNixcfg {
+  baz = lib.mkNixcfg {
     name = "baz";
     path = ./nixcfg-baz;
     inputs = {
@@ -55,9 +29,9 @@
       import
       (
         let
-          lock = builtins.fromJSON (builtins.readFile ./flake.lock);
+          lock = lib.fromJSON (lib.readFile ./flake.lock);
         in
-          fetchTarball {
+          lib.fetchTarball {
             url = "https://github.com/edolstra/flake-compat/archive/${lock.nodes.flake-compat.locked.rev}.tar.gz";
             sha256 = lock.nodes.flake-compat.locked.narHash;
           }
@@ -69,7 +43,7 @@
     ;
 
   exampleWith = attrs: let
-    self = mkNixcfg (let
+    self = lib.mkNixcfg (let
       attrs' =
         {
           name = "example";
@@ -91,11 +65,11 @@
 
   example = exampleWith { };
 
-  fails = expr: !(tryEval (deepSeq expr expr)).success;
+  fails = expr: !(lib.tryEval (lib.deepSeq expr expr)).success;
 
   tests = rec {
     testConcatAttrs = {
-      expr = concatAttrs [ { foo = 1; } { bar = 2; } { foo = 3; } ];
+      expr = lib.concatAttrs [ { foo = 1; } { bar = 2; } { foo = 3; } ];
       expected = {
         foo = 3;
         bar = 2;
@@ -103,7 +77,7 @@
     };
 
     testConcatAttrsRecursive = {
-      expr = concatAttrsRecursive [
+      expr = lib.concatAttrsRecursive [
         { foo = { a = 1; }; }
         { bar = 2; }
         {
@@ -124,7 +98,7 @@
 
     testExtendsList = {
       expr =
-        extendsList [
+        lib.extendsList [
           (final: prev: { bar = prev.bar + "baz"; })
         ] (final: {
           foo = "foo" + final.bar;
@@ -137,7 +111,7 @@
     };
 
     testListAttrs = {
-      expr = listAttrs ./nixcfg {
+      expr = lib.listAttrs ./nixcfg {
         lib."overlay.nix" = "libOverlay";
         pkgs."overlay.nix" = "overlay";
         nixos.configs = "nixosConfigurations";
@@ -165,7 +139,7 @@
 
     testApplyAttrs_1 = {
       expr =
-        applyAttrs (name: {
+        lib.applyAttrs (name: {
           users = username: {
             bar = 1;
           };
@@ -179,7 +153,7 @@
 
     testApplyAttrs_2 = {
       expr =
-        applyAttrs (name: {
+        lib.applyAttrs (name: {
           users = username: {
             modules = [ testListAttrs.expected.homeConfigurations."${name}_${username}" ];
           };
@@ -193,7 +167,7 @@
 
     testApplyAttrs_3 = {
       expr =
-        applyAttrs (name: {
+        lib.applyAttrs (name: {
           users = username: {
             modules = [ testListAttrs.expected.homeConfigurations."${name}_${username}" ];
           };
@@ -207,7 +181,7 @@
 
     testUpdateWithDefaults = {
       expr =
-        defaultUpdateExtend (_: {
+        lib.defaultUpdateExtend (_: {
           inputs = { };
           channelName = "nixpkgs";
           system = "x86_64-linux";
@@ -247,12 +221,12 @@
     };
 
     testBazNixcfgsOrder = {
-      expr = catAttrs "name" baz.nixcfgs;
+      expr = lib.catAttrs "name" baz.nixcfgs;
       expected = [ "foo" "bar" "baz" ];
     };
 
     testBazInputsOutPath = {
-      expr = all (input: input ? outPath) (attrValues baz.inputs);
+      expr = lib.all (input: input ? outPath) (lib.attrValues baz.inputs);
       expected = true;
     };
 
@@ -513,4 +487,4 @@
     };
   };
 in
-  runTests tests
+  lib.runTests tests

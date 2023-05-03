@@ -1,17 +1,8 @@
 {
-  nixpkgs,
+  lib,
   nixcfgsOverlays,
   channels,
 }: let
-  inherit (builtins)
-    isFunction
-    mapAttrs
-    ;
-  inherit (nixpkgs.lib)
-    genAttrs
-    optionalString
-    ;
-
   importChannel = {
     input,
     system,
@@ -23,7 +14,7 @@
       config = { allowUnfree = true; } // config;
       overlays =
         (
-          if isFunction overlays
+          if lib.isFunction overlays
           then overlays nixcfgsOverlays
           else overlays
         )
@@ -54,18 +45,18 @@
       channel
       // {
         input = (importNixpkgs { inherit input system; }).applyPatches {
-          name = "nixpkgs-${name}-patched${optionalString (input ? shortRev) ".git.${input.shortRev}"}";
+          name = "nixpkgs-${name}-patched${lib.optionalString (input ? shortRev) ".git.${input.shortRev}"}";
           src = input;
           inherit patches;
         };
       };
 in
   inputs: systems:
-    genAttrs systems (system:
-      mapAttrs (name: channel:
+    lib.genAttrs systems (system:
+      lib.mapAttrs (name: channel:
         importChannel (patchChannel name channel)) (
-        mapAttrs (_: input: { inherit input system; }) inputs
-        // mapAttrs (
+        lib.mapAttrs (_: input: { inherit input system; }) inputs
+        // lib.mapAttrs (
           name: {
             input ?
               inputs.${name}
