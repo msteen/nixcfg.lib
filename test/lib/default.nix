@@ -316,7 +316,7 @@
     };
 
     testNixosConfigurations = {
-      expr = example.nixosConfigurations.x86_64-linux.ubuntu.config.system.build ? toplevel;
+      expr = example.nixosConfigurations.ubuntu.config.system.build ? toplevel;
       expected = true;
     };
 
@@ -331,7 +331,7 @@
           homeConfigurations.ubuntu.channelName = "nixpkgs2";
         };
       in
-        example.nixosConfigurations.x86_64-linux.ubuntu.pkgs ? overlay2;
+        example.nixosConfigurations.ubuntu.pkgs ? overlay2;
       expected = true;
     };
 
@@ -343,7 +343,7 @@
           };
         };
       in
-        fails example.nixosConfigurations.x86_64-linux.ubuntu.pkgs.vscode.outPath;
+        fails example.nixosConfigurations.ubuntu.pkgs.vscode.outPath;
       expected = true;
     };
 
@@ -373,12 +373,12 @@
     };
 
     testHomeConfigurations = {
-      expr = example.homeConfigurations.x86_64-linux.ubuntu_matthijs ? activationPackage;
+      expr = example.homeConfigurations.ubuntu_matthijs ? activationPackage;
       expected = true;
     };
 
     testDefaultNixpkgs_1 = {
-      expr = example.homeConfigurations.x86_64-linux.ubuntu_matthijs.pkgs.input.outPath == inputs.nixpkgs.outPath;
+      expr = example.homeConfigurations.ubuntu_matthijs.pkgs.input.outPath == inputs.nixpkgs.outPath;
       expected = true;
     };
 
@@ -387,7 +387,7 @@
         example = exampleWith {
           inputs = removeAttrs inputs [ "nixpkgs" ];
         };
-        nixpkgsOutPath = example.homeConfigurations.x86_64-linux.ubuntu_matthijs.pkgs.input.outPath;
+        nixpkgsOutPath = example.homeConfigurations.ubuntu_matthijs.pkgs.input.outPath;
       in {
         isStableNixpkgs = nixpkgsOutPath == inputs.nixos-22_11.outPath;
         isNixcfgNixpkgs = nixpkgsOutPath == nixpkgs.outPath;
@@ -403,7 +403,7 @@
         example = exampleWith {
           inputs = removeAttrs inputs [ "nixpkgs" "nixos-22_11" "nixos-unstable" ];
         };
-        nixpkgsOutPath = example.homeConfigurations.x86_64-linux.ubuntu_matthijs.pkgs.input.outPath;
+        nixpkgsOutPath = example.homeConfigurations.ubuntu_matthijs.pkgs.input.outPath;
       in
         nixpkgsOutPath == nixpkgs.outPath;
       expected = true;
@@ -420,7 +420,7 @@
     };
 
     testContainerNoNixos_2 = {
-      expr = example.nixosConfigurations.x86_64-linux ? hello;
+      expr = example.nixosConfigurations ? hello;
       expected = false;
     };
 
@@ -442,7 +442,7 @@
           };
         };
       in
-        example.nixosConfigurations.x86_64-linux ? nofile;
+        example.nixosConfigurations ? nofile;
       expected = true;
     };
 
@@ -455,12 +455,12 @@
           };
         };
       in
-        example.nixosConfigurations.x86_64-linux.ubuntu.pkgs ? overlay;
+        example.nixosConfigurations.ubuntu.pkgs ? overlay;
       expected = true;
     };
 
     testBaseProfile = {
-      expr = example.nixosConfigurations.x86_64-linux.ubuntu.config.lib ? base;
+      expr = example.nixosConfigurations.ubuntu.config.lib ? base;
       expected = true;
     };
 
@@ -470,7 +470,7 @@
           inputs = removeAttrs inputs [ "nixos-unstable" ];
         };
       in
-        fails (example.containerConfigurations.x86_64-linux ? hello);
+        fails (example.containerConfigurations ? hello);
       expected = true;
     };
 
@@ -482,7 +482,7 @@
           ];
         };
       in
-        example.nixosConfigurations.x86_64-linux.ubuntu.config.lib.tests.test;
+        example.nixosConfigurations.ubuntu.config.lib.tests.test;
       expected = true;
     };
   };

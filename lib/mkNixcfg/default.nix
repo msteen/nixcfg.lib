@@ -19,9 +19,6 @@
     "apps"
     "formatter"
     "legacyPackages"
-    "nixosConfigurations"
-    "containerConfigurations"
-    "homeConfigurations"
     "devShells"
   ] (_: null);
 
@@ -361,21 +358,17 @@
   configurations =
     lib.mapAttrs (
       type: { apply ? (_: [ ]), ... }:
-        lib.mapAttrs (_: lib.listToAttrs) (lib.groupBy (x:
-            x.value.system
-            or x.value.pkgs.system
-            or (throw "The ${type} configuration is missing a system or pkgs attribute."))
-          (lib.concatMapAttrsToList (name: args: let
-              value = apply args;
-            in
-              if !(lib.isList value)
-              then lib.singleton (lib.nameValuePair name value)
-              else value)
-            (
-              if type == "nixos"
-              then removeAttrs applyArgs.nixos (lib.attrNames applyArgs.container)
-              else applyArgs.${type}
-            )))
+        lib.listToAttrs (lib.concatMapAttrsToList (name: args: let
+            value = apply args;
+          in
+            if !(lib.isList value)
+            then lib.singleton (lib.nameValuePair name value)
+            else value)
+          (
+            if type == "nixos"
+            then removeAttrs applyArgs.nixos (lib.attrNames applyArgs.container)
+            else applyArgs.${type}
+          ))
     )
     types;
 
