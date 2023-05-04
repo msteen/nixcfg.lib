@@ -2,16 +2,7 @@
   lib,
   nixpkgs,
   nixcfg,
-}: rawNixcfgArgs: let
-  nixcfgArgs =
-    {
-      overlays = { };
-      systems = [ "x86_64-linux" "aarch64-linux" ];
-      channels = { };
-      lib = { };
-    }
-    // rawNixcfgArgs;
-
+}: config: let
   flakeSystemAttrs = lib.genAttrs [
     "checks"
     "packages"
@@ -22,7 +13,7 @@
     "devShells"
   ] (_: null);
 
-  inherit (nixcfgArgs.inputs) self;
+  inherit (config.inputs) self;
 
   filterNixpkgsInputs = lib.filterAttrs (
     name: _:
@@ -41,15 +32,15 @@
       nixpkgs = latestInputs.nixos or latestInputs.release or nixpkgs;
     };
 
-  nixcfgsData = import ./mkNixcfgs.nix { inherit lib; } nixcfgArgs.inputs;
+  nixcfgsData = import ./mkNixcfgs.nix { inherit lib; } config.inputs;
   nixcfgs = nixcfgsData.list;
   nixcfgsInputs = lib.concatAttrs (lib.catAttrs "inputs" nixcfgs);
   nixcfgsNixpkgsInputs = inputsWithDefaultNixpkgs (filterNixpkgsInputs nixcfgsInputs);
-  nixcfgsChannels = mkChannels nixcfgsNixpkgsInputs nixcfgArgs.systems;
+  nixcfgsChannels = mkChannels nixcfgsNixpkgsInputs config.systems;
   nixcfgsLib = lib.extendsList (lib.catAttrs "libOverlay" nixcfgs) (final: nixcfg.lib);
 
   libNixpkgs = let
-    channelName = nixcfgArgs.lib.channelName or "nixpkgs";
+    channelName = config.lib.channelName or "nixpkgs";
   in
     nixcfgsNixpkgsInputs.${channelName}
     or (throw "The lib nixpkgs channel '${channelName}' does not exist.");
@@ -59,7 +50,7 @@
   mkChannels = import ./mkChannels.nix {
     inherit lib;
     nixcfgsOverlays = lib.mapAttrs (_: lib.getAttr "overlays") nixcfgsData.attrs;
-    channels = nixcfgArgs.channels or { };
+    channels = config.channels or { };
   };
 
   mkDefaultModules = type: name:
@@ -80,7 +71,7 @@
       # It would for example lead to misconfiguring home manager.
       inherit inputs';
       nixcfg = {
-        inherit (nixcfgArgs) name;
+        inherit (config) name;
         lib = nixcfgsLib;
       };
       data = lib.mapAttrs (_: lib.getAttr "data") nixcfgsData.attrs;
@@ -101,7 +92,7 @@
     inherit lib mkDefaultModules nixcfgs requireSops;
   };
 
-  listedArgs = lib.listAttrs nixcfgArgs.path ({
+  listedArgs = lib.listAttrs config.path ({
       lib."overlay.nix" = "libOverlay";
       pkgs."overlay.nix" = "overlay";
       overlays = "overlays";
@@ -300,7 +291,7 @@
             nameParts = lib.filter (x: lib.isString x && x != "") (lib.split "_" name);
           })
           listedArgs."${type}Configurations")
-        // nixcfgArgs."${type}Configurations" or { })
+        // config."${type}Configurations" or { })
         configuration.extend or (_: _: { });
 
       defaultFromListed = listed:
@@ -320,7 +311,7 @@
           channelName,
           ...
         } @ configurationArgs:
-          if !(lib.elem system nixcfgArgs.systems)
+          if !(lib.elem system config.systems)
           then throw "The ${type} configuration '${name}' has system '${system}', which is not listed in the supported systems."
           else configurationArgs
       )
@@ -339,7 +330,7 @@
           channelName,
           ...
         } @ configurationArgs: let
-          inputs = inputsWithDefaultNixpkgs (nixcfgsInputs // nixcfgArgs.inputs // configurationArgs.inputs);
+          inputs = inputsWithDefaultNixpkgs (nixcfgsInputs // config.inputs // configurationArgs.inputs);
           inputs' = lib.mapAttrs (_: flake: flake // lib.attrsGetAttr system (lib.intersectAttrs flakeSystemAttrs flake)) inputs;
           channels = (mkChannels (filterNixpkgsInputs inputs) [ system ]).${system} // nixcfgsChannels.${system};
           pkgs = channels.${channelName} or (throw "The ${type} nixpkgs channel '${channelName}' does not exist.");
@@ -373,7 +364,7 @@
     types;
 
   overlays = let
-    overlays = lib.mapAttrs (_: import) listedArgs.overlays // nixcfgArgs.overlays or { };
+    overlays = lib.mapAttrs (_: import) listedArgs.overlays // config.overlays or { };
   in
     if overlays ? default
     then throw "The overlay name 'default' is already reserved for the overlay defined in 'pkgs/overlay.nix'."
@@ -400,11 +391,13 @@
 in
   {
     inherit nixcfgs overlays;
-    inherit (nixcfgArgs) inputs name;
+    inherit (config) inputs name;
     lib = outputLib;
-    data = lib.mapAttrs (_: import) listedArgs.data // nixcfgArgs.data or { };
-    outPath = nixcfgArgs.path;
-    formatter = lib.genAttrs nixcfgArgs.systems (system: nixcfg.inputs.alejandra.defaultPackage.${system});
+    data = lib.mapAttrs (_: import) listedArgs.data // config.data or { };
+    outPath = config.path;
+    formatter =
+      lib.genAttrs config.systems (system:
+        nixcfg.inputs.alejandra.defaultPackage.${system});
   }
   // overlayOutputs
   // lib.getAttrs (lib.concatMap (type: [ "${type}Modules" "${type}Profiles" ]) (lib.attrNames types)) listedArgs

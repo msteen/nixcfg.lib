@@ -8,6 +8,7 @@
     system,
     config ? { },
     overlays ? [ ],
+    ...
   }:
     importNixpkgs {
       inherit input system;
@@ -27,6 +28,7 @@
     system,
     config ? { },
     overlays ? [ ],
+    ...
   }:
     import (input + "/pkgs/top-level") {
       localSystem = { inherit system; };
@@ -57,12 +59,14 @@ in
         importChannel (patchChannel name channel)) (
         lib.mapAttrs (_: input: { inherit input system; }) inputs
         // lib.mapAttrs (
-          name: {
-            input ?
-              inputs.${name}
-              or (throw "Channel '${name}' is missing the required input attribute or does not have it implicit through inputs."),
-            ...
-          } @ channel:
+          name: channel: let
+            input =
+              if channel.input or null == null
+              then
+                inputs.${name}
+                or (throw "Channel '${name}' is missing the required input attribute or does not have it implicit through inputs.")
+              else channel.input;
+          in
             channel // { inherit input system; }
         )
         channels

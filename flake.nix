@@ -6,13 +6,15 @@
 
     alejandra.url = "github:msteen/alejandra";
     alejandra.inputs.nixpkgs.follows = "nixpkgs";
+
+    flake-utils.url = "github:numtide/flake-utils";
   };
 
   outputs = {
     self,
     nixpkgs,
     ...
-  } @ inputs: let
+  }: let
     nixcfg = self;
 
     # Do not allow overwriting expected behaviours of builtins and standard lib.

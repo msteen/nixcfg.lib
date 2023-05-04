@@ -119,7 +119,12 @@
 
   listAttrs = import ./listAttrs.nix { inherit lib; };
 
-  mkNixcfg = import ./mkNixcfg { inherit lib nixcfg nixpkgs; };
+  mkNixcfg = let
+    mkNixcfg = import ./mkNixcfg { inherit lib nixcfg nixpkgs; };
+  in
+    config: mkNixcfg (lib.nixcfgConfig config);
+
+  nixcfgConfig = import ./nixcfgConfig.nix { inherit lib nixcfg nixpkgs; };
 
   dummyNixosModule = {
     boot.loader.grub.enable = false;
