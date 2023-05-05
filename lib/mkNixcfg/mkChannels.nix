@@ -1,9 +1,5 @@
-{
-  lib,
-  nixcfgsOverlays,
-  channels,
-}: let
-  importChannel = {
+{ lib }: let
+  importChannel = nixcfgsOverlays: {
     input,
     system,
     config ? { },
@@ -53,10 +49,13 @@
         };
       };
 in
-  inputs: systems:
+  {
+    nixcfgsOverlays,
+    channels,
+  }: inputs: systems:
     lib.genAttrs systems (system:
       lib.mapAttrs (name: channel:
-        importChannel (patchChannel name channel)) (
+        importChannel nixcfgsOverlays (patchChannel name channel)) (
         lib.mapAttrs (_: input: { inherit input system; }) inputs
         // lib.mapAttrs (
           name: channel: let
