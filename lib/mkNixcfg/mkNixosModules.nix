@@ -1,11 +1,10 @@
 {
   lib,
-  self,
+  config,
   nixcfgs,
-  mkDefaultModules,
-  requireSops,
-  homeApplyArgs,
+  homeConfigurationsArgs,
   mkSpecialArgs,
+  mkDefaultModules,
   mkHomeModules,
 }: {
   name,
@@ -19,17 +18,21 @@
 }:
 mkDefaultModules "nixos" name
 ++ modules
-++ lib.optional requireSops inputs.sops-nix.nixosModules.sops
-++ lib.optionals (homeApplyArgs ? ${name}) (let
-  homeArgs = homeApplyArgs.${name};
+++ lib.optional config.requireSops inputs.sops-nix.nixosModules.sops
+++ lib.optionals (homeConfigurationsArgs ? ${name}) (let
+  homeConfigurationArgs = homeConfigurationsArgs.${name};
 in [
-  homeArgs.inputs.home-manager.nixosModules.home-manager
+  homeConfigurationArgs.inputs.home-manager.nixosModules.home-manager
   {
     home-manager = {
       useGlobalPkgs = true;
       useUserPackages = true;
-      extraSpecialArgs = mkSpecialArgs "home" homeArgs;
-      users = lib.mapAttrs (username: user: { imports = mkHomeModules homeArgs username user; }) homeArgs.users;
+      extraSpecialArgs = mkSpecialArgs "home" homeConfigurationArgs;
+      users =
+        lib.mapAttrs (username: user: {
+          imports = mkHomeModules homeConfigurationArgs username user;
+        })
+        homeConfigurationArgs.users;
     };
 
     # Prevent conflicting definition values due to:
@@ -43,31 +46,34 @@ in [
         group = lib.mkOverride 999 username;
         home = homeDirectory;
       })
-      homeArgs.users;
-    users.groups = lib.mapAttrs (_: _: { }) homeArgs.users;
+      homeConfigurationArgs.users;
+    users.groups = lib.mapAttrs (_: _: { }) homeConfigurationArgs.users;
   }
 ])
-++ lib.singleton ({ config, ... }: {
-  nix.extraOptions = "extra-experimental-features = ${lib.concatStringsSep " "
-    ([ "nix-command" "flakes" ] ++ lib.optional (!lib.versionAtLeast config.nix.package.version "2.5pre") "ca-references")}";
+++ lib.singleton (let
+  inherit (config.inputs) self;
+in
+  { config, ... }: {
+    nix.extraOptions = "extra-experimental-features = ${lib.concatStringsSep " "
+      ([ "nix-command" "flakes" ] ++ lib.optional (!lib.versionAtLeast config.nix.package.version "2.5pre") "ca-references")}";
 
-  environment.etc =
-    lib.mapAttrs' (name: input: {
-      name = "nix/inputs/${name}";
-      value.source = input.outPath;
-    })
-    inputs;
-  nix.nixPath = [ "/etc/nix/inputs" ];
-  nix.registry = lib.mapAttrs (_: input: { flake = input; }) inputs;
+    environment.etc =
+      lib.mapAttrs' (name: input: {
+        name = "nix/inputs/${name}";
+        value.source = input.outPath;
+      })
+      inputs;
+    nix.nixPath = [ "/etc/nix/inputs" ];
+    nix.registry = lib.mapAttrs (_: input: { flake = input; }) inputs;
 
-  networking.hostName = lib.mkDefault name;
-  networking.hostId = lib.mkDefault (lib.substring 0 8 (lib.hashString "sha256" name));
+    networking.hostName = lib.mkDefault name;
+    networking.hostId = lib.mkDefault (lib.substring 0 8 (lib.hashString "sha256" name));
 
-  nixpkgs.pkgs = lib.mkDefault pkgs;
-  nixpkgs.overlays = [ (final: prev: channels) ] ++ lib.catAttrs "overlay" nixcfgs;
+    nixpkgs.pkgs = lib.mkDefault pkgs;
+    nixpkgs.overlays = [ (final: prev: channels) ] ++ lib.catAttrs "overlay" nixcfgs;
 
-  system.nixos.revision = lib.mkDefault config.system.configurationRevision;
-  system.nixos.versionSuffix = lib.mkDefault ".${lib.substring 0 8 (self.lastModifiedDate or "19700101")}.${self.shortRev or "dirty"}";
-  system.stateVersion = stateVersion;
-  system.configurationRevision = lib.mkIf (self ? rev) self.rev;
-})
+    system.nixos.revision = lib.mkDefault config.system.configurationRevision;
+    system.nixos.versionSuffix = lib.mkDefault ".${lib.substring 0 8 (self.lastModifiedDate or "19700101")}.${self.shortRev or "dirty"}";
+    system.stateVersion = stateVersion;
+    system.configurationRevision = lib.mkIf (self ? rev) self.rev;
+  })

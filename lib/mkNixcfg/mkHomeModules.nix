@@ -1,8 +1,8 @@
 {
   lib,
+  config,
   nixcfgs,
   mkDefaultModules,
-  requireSops,
 }: {
   name,
   inputs,
@@ -14,7 +14,7 @@
   modules,
 }:
 mkDefaultModules "home" name
-++ lib.optional requireSops inputs.sops-nix.homeManagerModules.sops
+++ lib.optional config.requireSops inputs.sops-nix.homeManagerModules.sops
 ++ modules
 ++ lib.singleton {
   nixpkgs.overlays = [ (final: prev: channels) ] ++ lib.catAttrs "overlay" nixcfgs;

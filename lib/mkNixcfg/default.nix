@@ -3,48 +3,51 @@
   nixpkgs,
   nixcfg,
 }: let
+  configurationTypes = lib.attrNames requiredInputs;
+
+  requiredInputs = {
+    nixos = [ ];
+    container = [ "extra-container" ];
+    home = [ "home-manager" ];
+  };
+
+  flakeSystemAttrs = lib.genAttrs [
+    "checks"
+    "packages"
+    "apps"
+    "formatter"
+    "legacyPackages"
+    "devShells"
+  ] (_: null);
+
   mkConfig = import ./mkConfig.nix { inherit lib nixcfg nixpkgs; };
   mkNixcfgs = import ./mkNixcfgs.nix { inherit lib; };
   mkChannels = import ./mkChannels.nix { inherit lib; };
+
+  filterNixpkgsInputs = lib.filterAttrs (
+    name: _input:
+      lib.elem name [ "nixpkgs" "nixpkgs-unstable" ]
+      || lib.hasPrefix "nixos-" name
+      || lib.hasPrefix "release-" name
+  );
+
+  inputsWithDefaultNixpkgs = inputs: let
+    latestInputs =
+      lib.mapAttrs (_name: names: inputs.${lib.maximum lib.compareVersions names})
+      (lib.groupBy (name: lib.head (lib.splitVersion name)) (lib.attrNames inputs));
+  in
+    inputs
+    // lib.optionalAttrs (!inputs ? nixpkgs) {
+      nixpkgs = latestInputs.nixos or latestInputs.release or nixpkgs;
+    };
 in
   rawConfig: let
     config = mkConfig rawConfig;
 
-    flakeSystemAttrs = lib.genAttrs [
-      "checks"
-      "packages"
-      "packages"
-      "apps"
-      "formatter"
-      "legacyPackages"
-      "devShells"
-    ] (_: null);
+    inherit (mkNixcfgs config.inputs) nixcfgs nixcfgsAttrs;
 
-    inherit (config.inputs) self;
-
-    filterNixpkgsInputs = lib.filterAttrs (
-      name: _:
-        lib.elem name [ "nixpkgs" "nixpkgs-unstable" ]
-        || lib.hasPrefix "nixos-" name
-        || lib.hasPrefix "release-" name
-    );
-
-    inputsWithDefaultNixpkgs = inputs: let
-      latestInputs =
-        lib.mapAttrs (_: names: inputs.${lib.maximum lib.compareVersions names})
-        (lib.groupBy (name: lib.head (lib.splitVersion name)) (lib.attrNames inputs));
-    in
-      inputs
-      // lib.optionalAttrs (!inputs ? nixpkgs) {
-        nixpkgs = latestInputs.nixos or latestInputs.release or nixpkgs;
-      };
-
-    nixcfgsData = mkNixcfgs config.inputs;
-    nixcfgs = nixcfgsData.list;
-    nixcfgsInputs = lib.concatAttrs (lib.catAttrs "inputs" nixcfgs);
+    nixcfgsInputs = lib.concatAttrs (lib.mapGetAttrPath [ "config" "inputs" ] nixcfgs);
     nixcfgsNixpkgsInputs = inputsWithDefaultNixpkgs (filterNixpkgsInputs nixcfgsInputs);
-    nixcfgsChannels = mkChannels' nixcfgsNixpkgsInputs config.systems;
-    nixcfgsLib = lib.extendsList (lib.catAttrs "libOverlay" nixcfgs) (final: nixcfg.lib);
 
     libNixpkgs = let
       channelName = config.lib.channelName or "nixpkgs";
@@ -52,19 +55,54 @@ in
       nixcfgsNixpkgsInputs.${channelName}
       or (throw "The lib nixpkgs channel '${channelName}' does not exist.");
 
-    outputLib = nixcfgsLib // libNixpkgs.lib // builtins;
+    libOverlays = lib.singleton (final: prev: { lib = nixpkgsLib; }) ++ config.lib.overlays;
+
+    nixpkgsLib = libNixpkgs.lib // { input = libNixpkgs; };
+    nixcfgsLib = lib.extendsList (lib.concatLists (lib.catAttrs "libOverlays" nixcfgs)) (final: nixcfg.lib);
+    outputLib = nixcfgsLib // nixpkgsLib // builtins;
 
     mkChannels' = mkChannels {
-      nixcfgsOverlays = lib.mapAttrs (_: lib.getAttr "overlays") nixcfgsData.attrs;
+      nixcfgsOverlays = lib.mapAttrs (_: lib.getAttr "overlays") nixcfgsAttrs;
       inherit (config) channels;
     };
 
-    mkDefaultModules = type: name:
-      lib.concatMap lib.attrValues (lib.catAttrs "${type}Modules" nixcfgs)
-      ++ lib.concatMap (lib.optionalAttr "base") (lib.catAttrs "${type}Profiles" nixcfgs)
-      ++ lib.optional (requireSops && lib.elem type [ "nixos" "home" ]) {
-        sops.defaultSopsFile = self.outPath + "/${type}/configs/${name}/secrets.yaml";
-      };
+    nixcfgsChannels = mkChannels' nixcfgsNixpkgsInputs config.systems;
+
+    configurationsArgs = lib.genAttrs configurationTypes (
+      type:
+        lib.mapAttrs (name: {
+            system,
+            channelName,
+            ...
+          } @ configuration: let
+            inputs = inputsWithDefaultNixpkgs (
+              nixcfgsInputs
+              // config.inputs
+              // configuration.inputs
+            );
+            inputs' = lib.mapAttrs (_: flake:
+              flake
+              // lib.attrsGetAttr system (lib.intersectAttrs flakeSystemAttrs flake))
+            inputs;
+            channels =
+              (mkChannels' (filterNixpkgsInputs inputs) [ system ]).${system}
+              // nixcfgsChannels.${system};
+            pkgs =
+              channels.${channelName}
+              or (throw "The ${type} nixpkgs channel '${channelName}' does not exist.");
+            unavailableInputs =
+              lib.filter (requiredInput: !inputs ? ${requiredInput})
+              ((requiredInputs.${type} or [ ]) ++ lib.optional config.requireSops "sops-nix");
+          in
+            if unavailableInputs != [ ]
+            then throw "The ${type} configuration '${name}' did not specify '${lib.head unavailableInputs}' as part of their inputs."
+            else
+              configuration
+              // {
+                inherit channels inputs inputs' name pkgs;
+              })
+        config."${type}Configurations"
+    );
 
     mkSpecialArgs = type: {
       name,
@@ -80,87 +118,52 @@ in
           inherit (config) name;
           lib = nixcfgsLib;
         };
-        data = lib.mapAttrs (_: lib.getAttr "data") nixcfgsData.attrs;
-        profiles = lib.mapAttrs (_: lib.getAttr "${type}Profiles") nixcfgsData.attrs;
+        data = lib.mapAttrs (_: lib.getAttrPath [ "config" "data" ]) nixcfgsAttrs;
+        profiles = lib.mapAttrs (_: lib.getAttr "${type}Profiles") nixcfgsAttrs;
       }
-      # Home Manager extends NixOS's lib, which we would overwrite with our own lib.
-      // lib.optionalAttrs (!(type == "home" && applyArgs.nixos ? ${name})) {
+      # This would otherwise overwrite the extensions made to lib by Home Manager.
+      // lib.optionalAttrs (type != "home") {
         lib = outputLib;
       }
       // moduleArgs;
 
+    mkDefaultModules = type: name:
+      lib.concatMap lib.attrValues (lib.catAttrs "${type}Modules" nixcfgs)
+      ++ lib.concatMap (lib.optionalAttr "base") (lib.catAttrs "${type}Profiles" nixcfgs)
+      ++ lib.optional (config.requireSops && lib.elem type [ "nixos" "home" ]) {
+        sops.defaultSopsFile = config.path + "/${type}/configs/${name}/secrets.yaml";
+      };
+
     mkNixosModules = import ./mkNixosModules.nix {
-      inherit lib mkDefaultModules mkHomeModules mkSpecialArgs nixcfgs requireSops self;
-      homeApplyArgs = applyArgs.home;
+      inherit config lib mkDefaultModules mkHomeModules mkSpecialArgs nixcfgs;
+      homeConfigurationsArgs = configurationsArgs.home;
     };
 
     mkHomeModules = import ./mkHomeModules.nix {
-      inherit lib mkDefaultModules nixcfgs requireSops;
+      inherit config lib mkDefaultModules nixcfgs;
     };
 
-    listedArgs = lib.listAttrs config.path ({
-        lib."overlay.nix" = "libOverlay";
-        pkgs."overlay.nix" = "overlay";
-        overlays = "overlays";
-        data = "data";
-        ".sops.yaml" = "sopsConfig";
-      }
-      // lib.mapAttrs (name: _: {
-        configs = "${name}Configurations";
-        modules = "${name}Modules";
-        profiles = "${name}Profiles";
-      })
-      types);
+    mkConfigurations = configurationsArgs: f:
+      lib.listToAttrs (lib.concatMapAttrsToList (name: configurationArgs: let
+        value = f configurationArgs;
+      in
+        if !(lib.isList value)
+        then lib.singleton (lib.nameValuePair name value)
+        else value)
+      configurationsArgs);
 
-    requireSops = listedArgs ? sopsConfig;
+    nixosConfigurations =
+      mkConfigurations (removeAttrs configurationsArgs.nixos (lib.attrNames configurationsArgs.container))
+      (args: (import (args.pkgs.input + "/nixos/lib/eval-config.nix") {
+        inherit (args) system;
+        lib = outputLib;
+        specialArgs = mkSpecialArgs "nixos" args;
+        modules = mkNixosModules args;
+      }));
 
-    types = let
-      default = {
-        inputs = { };
-        channelName = "nixpkgs";
-        system = "x86_64-linux";
-        moduleArgs = { };
-        stateVersion = "22.11";
-      };
-    in {
-      nixos = {
-        default = _: default // { modules = [ ]; };
-
-        extend = final: prev: name: {
-          modules = let
-            modules =
-              prev.${name}.modules
-              ++ lib.optionalAttr name listedArgs.nixosConfigurations;
-          in
-            if modules == [ ]
-            then throw "The nixos configuration '${name}' is missing in 'nixos/configs/'."
-            else modules;
-        };
-
-        apply = args: (import (args.pkgs.input + "/nixos/lib/eval-config.nix") {
-          inherit (args) lib system;
-          specialArgs = mkSpecialArgs "nixos" args;
-          modules = mkNixosModules args;
-        });
-      };
-
-      container = {
-        default = _: default // { modules = [ ]; };
-
-        extend = final: prev: name: {
-          modules = let
-            modules =
-              prev.${name}.modules
-              ++ lib.optionalAttr name listedArgs.containerConfigurations;
-          in
-            if modules == [ ]
-            then throw "The container configuration '${name}' is missing in 'container/configs/'."
-            else modules;
-        };
-
-        requiredInputs = [ "extra-container" ];
-
-        apply = {
+    containerConfigurations =
+      mkConfigurations configurationsArgs.container
+      ({
           name,
           inputs,
           system,
@@ -195,12 +198,12 @@ in
                   });
                 };
                 config.containers.${name} = let
-                  args = applyArgs.nixos.${name};
+                  args = configurationsArgs.nixos.${name};
                 in {
                   specialArgs = mkSpecialArgs "nixos" args;
                   config.imports =
                     mkNixosModules args
-                    ++ lib.optional (applyArgs.home ? ${name}) {
+                    ++ lib.optional (configurationsArgs.home ? ${name}) {
                       systemd.services.fix-home-manager = {
                         serviceConfig = {
                           Type = "oneshot";
@@ -209,66 +212,17 @@ in
                             mkdir -p /nix/var/nix/{profiles,gcroots}/per-user/${name}
                             chown ${name}:root /nix/var/nix/{profiles,gcroots}/per-user/${name}
                           '')
-                          applyArgs.home.${name}.users);
+                          configurationsArgs.home.${name}.users);
                         wantedBy = [ "multi-user.target" ];
                       };
                     };
                 };
               };
-          };
-      };
+          });
 
-      home = {
-        default = _:
-          default
-          // {
-            users = username: {
-              homeDirectory = "/home/${username}";
-              modules = [ ];
-            };
-          };
-
-        fromListed = listed:
-          lib.mapAttrs (_: group: {
-            users = lib.mapToAttrs ({ username, ... }: lib.nameValuePair username { }) group;
-          }) (lib.groupBy (x: x.name) (map ({
-            name,
-            nameParts,
-            ...
-          }:
-            if lib.length nameParts == 2
-            then {
-              name = lib.head nameParts;
-              username = lib.elemAt nameParts 1;
-            }
-            else throw "The home configuration '${name}' should be in the root of 'home/configs/<name>' as '<username>.nix' or '<username>/default.nix'.")
-          listed));
-
-        extend = final: prev: name: let
-          nixosConfigurationArgs = configurationsArgs.nixos.${name};
-          homeConfigurationArgs = prev.${name};
-          invalidOptions =
-            lib.filter (option: homeConfigurationArgs ? ${option} && homeConfigurationArgs.${option} != nixosConfigurationArgs.${option})
-            [ "system" "channelName" "stateVersion" ];
-        in
-          if configurationsArgs.nixos ? ${name} && invalidOptions != [ ]
-          then throw "The home configuration '${name}' has the options ${lib.toJSON invalidOptions} that do not equal those found in its NixOS configuration."
-          else {
-            users = username: {
-              modules = let
-                modules =
-                  prev.${name}.users.${username}.modules
-                  ++ lib.optionalAttr "${name}_${username}" listedArgs.homeConfigurations;
-              in
-                if modules == [ ]
-                then throw "The home configuration '${name}' is missing a user configuration for '${username}' in 'home/configs/${name}/'."
-                else modules;
-            };
-          };
-
-        requiredInputs = [ "home-manager" ];
-
-        apply = {
+    homeConfigurations =
+      mkConfigurations configurationsArgs.home
+      ({
           name,
           inputs,
           pkgs,
@@ -283,129 +237,25 @@ in
               modules = mkHomeModules args username user;
               check = true;
             }))
-          users;
-      };
-    };
+          users);
 
-    configurationsArgs = let
-      configurationsArgs = lib.mapAttrs (type: configuration: let
-        configurationsArgs =
-          lib.defaultUpdateExtend
-          configuration.default or { }
-          ((configuration.fromListed or defaultFromListed) (lib.mapAttrsToList (name: path: {
-              inherit name path;
-              nameParts = lib.filter (x: lib.isString x && x != "") (lib.split "_" name);
-            })
-            listedArgs."${type}Configurations")
-          // config."${type}Configurations" or { })
-          configuration.extend or (_: _: { });
+    flakeOutputs =
+      {
+        inherit containerConfigurations homeConfigurations nixosConfigurations;
+        inherit (config) overlays;
+        formatter =
+          lib.genAttrs config.systems (system:
+            nixcfg.inputs.alejandra.defaultPackage.${system});
+      }
+      // lib.getAttrs (lib.concatMap (type: [ "${type}Modules" "${type}Profiles" ]) configurationTypes) config;
 
-        defaultFromListed = listed:
-          lib.mapToAttrs ({
-            name,
-            nameParts,
-            ...
-          }:
-            if lib.length nameParts == 1
-            then lib.nameValuePair (lib.head nameParts) { }
-            else throw "The ${type} configuration '${name}' should be in the root of '${type}/configs/' as '${name}.nix' or '${name}/default.nix'.")
-          listed;
-      in
-        lib.mapAttrs (
-          name: {
-            system,
-            channelName,
-            ...
-          } @ configurationArgs:
-            if !(lib.elem system config.systems)
-            then throw "The ${type} configuration '${name}' has system '${system}', which is not listed in the supported systems."
-            else configurationArgs
-        )
-        configurationsArgs)
-      types;
-    in (
-      if lib.length (lib.attrNames (lib.intersectAttrs configurationsArgs.container configurationsArgs.nixos)) != lib.length (lib.attrNames configurationsArgs.container)
-      then throw "For each container configuration there should be a corresponding nixos configuration."
-      else configurationsArgs
-    );
-
-    applyArgs = lib.mapAttrs (type: configurationsArgs:
-      lib.updateLevels 1 configurationsArgs (lib.mapAttrs (
-          name: {
-            system,
-            channelName,
-            ...
-          } @ configurationArgs: let
-            inputs = inputsWithDefaultNixpkgs (nixcfgsInputs // config.inputs // configurationArgs.inputs);
-            inputs' = lib.mapAttrs (_: flake: flake // lib.attrsGetAttr system (lib.intersectAttrs flakeSystemAttrs flake)) inputs;
-            channels = (mkChannels' (filterNixpkgsInputs inputs) [ system ]).${system} // nixcfgsChannels.${system};
-            pkgs = channels.${channelName} or (throw "The ${type} nixpkgs channel '${channelName}' does not exist.");
-            unavailableInputs = lib.filter (requiredInput: !inputs ? ${requiredInput}) ((types.${type}.requiredInputs or [ ]) ++ lib.optional requireSops "sops-nix");
-          in
-            if unavailableInputs != [ ]
-            then throw "The ${type} configuration '${name}' did not specify '${lib.head unavailableInputs}' as part of their inputs."
-            else {
-              inherit channels inputs inputs' name pkgs;
-              inherit (pkgs) lib;
-            }
-        )
-        configurationsArgs))
-    configurationsArgs;
-
-    configurations =
-      lib.mapAttrs (
-        type: { apply ? (_: [ ]), ... }:
-          lib.listToAttrs (lib.concatMapAttrsToList (name: args: let
-              value = apply args;
-            in
-              if !(lib.isList value)
-              then lib.singleton (lib.nameValuePair name value)
-              else value)
-            (
-              if type == "nixos"
-              then removeAttrs applyArgs.nixos (lib.attrNames applyArgs.container)
-              else applyArgs.${type}
-            ))
-      )
-      types;
-
-    overlays = let
-      overlays = lib.mapAttrs (_: import) listedArgs.overlays // config.overlays or { };
-    in
-      if overlays ? default
-      then throw "The overlay name 'default' is already reserved for the overlay defined in 'pkgs/overlay.nix'."
-      else
-        overlays
-        // lib.optionalAttrs (listedArgs ? overlay) {
-          default = listedArgs.overlay;
-        };
-
-    overlayOutputs = let
-      # Nixpkgs overlays are required to be overlay functions, paths are not allowed.
-      overlayOutputs = lib.mapAttrs (_: import) (lib.optionalInherit listedArgs [ "libOverlay" "overlay" ]);
-      nixpkgsLibOverlay = { lib = libNixpkgs.lib // { input = libNixpkgs; }; };
-    in
-      overlayOutputs
-      // lib.optionalAttrs (overlayOutputs ? libOverlay) {
-        libOverlay = let
-          inherit (overlayOutputs) libOverlay;
-        in
-          if lib.isFunction libOverlay
-          then final: prev: libOverlay final prev // nixpkgsLibOverlay
-          else libOverlay // nixpkgsLibOverlay;
-      };
+    customOutputs =
+      {
+        inherit config libOverlays nixcfgs;
+        lib = outputLib;
+        # This is normally generated by flakes, but is useful to expose outside of flakes too.
+        outPath = config.path;
+      }
+      // lib.mapToAttrs (type: lib.nameValuePair "${type}ConfigurationsArgs" config."${type}Configurations") configurationTypes;
   in
-    {
-      inherit nixcfgs overlays;
-      inherit (config) inputs name;
-      lib = outputLib;
-      data = lib.mapAttrs (_: import) listedArgs.data // config.data or { };
-      outPath = config.path;
-      formatter =
-        lib.genAttrs config.systems (system:
-          nixcfg.inputs.alejandra.defaultPackage.${system});
-    }
-    // overlayOutputs
-    // lib.getAttrs (lib.concatMap (type: [ "${type}Modules" "${type}Profiles" ]) (lib.attrNames types)) listedArgs
-    // lib.mapAttrs' (type: lib.nameValuePair "${type}ConfigurationsArgs") configurationsArgs
-    // lib.mapAttrs' (type: lib.nameValuePair "${type}Configurations") configurations
+    flakeOutputs // customOutputs

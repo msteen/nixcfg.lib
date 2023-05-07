@@ -192,7 +192,7 @@
           };
         }) {
           ubuntu = {
-            inherit (bar) inputs;
+            inherit (bar.config) inputs;
             channelName = "nixos-22_11";
             users.matthijs = { };
           };
@@ -205,7 +205,7 @@
         });
       expected = {
         ubuntu = {
-          inherit (bar) inputs;
+          inherit (bar.config) inputs;
           channelName = "nixos-22_11";
           system = "x86_64-linux";
           moduleArgs = { };
@@ -216,17 +216,17 @@
     };
 
     testFooName = {
-      expr = foo.name;
+      expr = foo.config.name;
       expected = "foo";
     };
 
     testBazNixcfgsOrder = {
-      expr = lib.catAttrs "name" baz.nixcfgs;
+      expr = lib.mapGetAttrPath [ "config" "name" ] baz.nixcfgs;
       expected = [ "foo" "bar" "baz" ];
     };
 
     testBazInputsOutPath = {
-      expr = lib.all (input: input ? outPath) (lib.attrValues baz.inputs);
+      expr = lib.all (input: input ? outPath) (lib.attrValues baz.config.inputs);
       expected = true;
     };
 
@@ -271,7 +271,10 @@
           moduleArgs = { };
           stateVersion = "22.11";
           system = "x86_64-linux";
-          users = { };
+          users.matthijs = {
+            homeDirectory = "/home/matthijs";
+            modules = [ ./nixcfg/home/configs/ubuntu/matthijs.nix ];
+          };
         };
       };
     };
@@ -289,10 +292,7 @@
     };
 
     testNixcfgsLib_1 = {
-      expr = let
-        inherit (example) lib;
-      in
-        (lib.lib.input.outPath or null) == inputs.nixpkgs.outPath && lib ? mkNixcfg;
+      expr = example.lib ? overlay;
       expected = true;
     };
 
@@ -311,7 +311,20 @@
       expr = let
         inherit (example) lib;
       in
-        lib.overlay or null == true;
+        (lib.lib.input.outPath or null) == inputs.nixpkgs.outPath && lib ? mkNixcfg;
+      expected = true;
+    };
+
+    testNixcfgsLib_4 = {
+      expr = let
+        example = exampleWith {
+          lib = {
+            channelName = "nixos-unstable";
+            overlays = [ (final: prev: { test = prev.lib.input.outPath or null == inputs.nixos-unstable.outPath; }) ];
+          };
+        };
+      in
+        example.lib.test;
       expected = true;
     };
 
