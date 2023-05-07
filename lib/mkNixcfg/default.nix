@@ -240,6 +240,7 @@ in
             lib.mapAttrsToList (username: user:
               lib.nameValuePair "${name}_${username}" (inputs.home-manager.lib.homeManagerConfiguration {
                 inherit pkgs;
+                lib = outputLib;
                 extraSpecialArgs = mkSpecialArgs "home" args;
                 modules = mkHomeModules args username user;
                 check = true;
