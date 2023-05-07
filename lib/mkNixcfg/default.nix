@@ -11,6 +11,16 @@
     home = [ "home-manager" ];
   };
 
+  configurationToPackage = {
+    nixos = configuration: configuration.config.system.build.toplevel;
+    container = configuration: removeAttrs configuration [ "config" "containers" ];
+    hello = configuration: configuration.activationPackage;
+  };
+
+  mkConfig = import ./mkConfig.nix { inherit lib nixcfg nixpkgs; };
+  mkNixcfgs = import ./mkNixcfgs.nix { inherit lib; };
+  mkChannels = import ./mkChannels.nix { inherit lib; };
+
   flakeSystemAttrs = lib.genAttrs [
     "checks"
     "packages"
@@ -19,10 +29,6 @@
     "legacyPackages"
     "devShells"
   ] (_: null);
-
-  mkConfig = import ./mkConfig.nix { inherit lib nixcfg nixpkgs; };
-  mkNixcfgs = import ./mkNixcfgs.nix { inherit lib; };
-  mkChannels = import ./mkChannels.nix { inherit lib; };
 
   filterNixpkgsInputs = lib.filterAttrs (
     name: _input:
@@ -241,8 +247,31 @@ in
             users);
     };
 
+    packages = let
+      list = lib.concatMap (type:
+        lib.mapAttrsToList (
+          name: configuration: let
+            system =
+              configuration.system
+              or configuration.pkgs.system
+              or (throw "The ${type} configuration is missing a system or pkgs attribute.");
+          in {
+            inherit name system type;
+            value = configurationToPackage.${type} configuration;
+          }
+        )
+        configurations.${type})
+      configurationTypes;
+    in
+      lib.mapAttrs (system: group:
+        lib.mapAttrs (type: group:
+          lib.listToAttrs group)
+        (lib.groupBy (x: x.type) group))
+      (lib.groupBy (x: x.system) list);
+
     flakeOutputs =
       {
+        inherit packages;
         inherit (config) overlays;
         formatter =
           lib.genAttrs config.systems (system:
