@@ -57,7 +57,7 @@ in
 
     libOverlays = lib.singleton (final: prev: { lib = nixpkgsLib; }) ++ config.lib.overlays;
 
-    nixpkgsLib = libNixpkgs.lib // { input = libNixpkgs; };
+    nixpkgsLib = libNixpkgs.lib.extend (final: prev: { input = libNixpkgs; });
     nixcfgsLib = lib.extendsList (lib.concatLists (lib.catAttrs "libOverlays" nixcfgs)) (final: nixcfg.lib);
     outputLib = nixcfgsLib // nixpkgsLib // builtins;
 
