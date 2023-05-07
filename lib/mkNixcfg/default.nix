@@ -152,101 +152,103 @@ in
         else value)
       configurationsArgs);
 
-    nixosConfigurations =
-      mkConfigurations (removeAttrs configurationsArgs.nixos (lib.attrNames configurationsArgs.container))
-      (args: (import (args.pkgs.input + "/nixos/lib/eval-config.nix") {
-        inherit (args) system;
-        lib = outputLib;
-        specialArgs = mkSpecialArgs "nixos" args;
-        modules = mkNixosModules args;
-      }));
+    configurations = {
+      nixos =
+        mkConfigurations (removeAttrs configurationsArgs.nixos (lib.attrNames configurationsArgs.container))
+        (args: (import (args.pkgs.input + "/nixos/lib/eval-config.nix") {
+          inherit (args) system;
+          lib = outputLib;
+          specialArgs = mkSpecialArgs "nixos" args;
+          modules = mkNixosModules args;
+        }));
 
-    containerConfigurations =
-      mkConfigurations configurationsArgs.container
-      ({
-          name,
-          inputs,
-          system,
-          channelName,
-          modules,
-          ...
-        } @ args: let
-          inherit (lib.types) attrsOf submoduleWith;
-        in
-          inputs.extra-container.lib.buildContainers {
-            inherit system;
-            nixpkgs = inputs.${channelName};
-            config.imports =
-              lib.optional (lib.compareVersions lib.trivial.release "23.05" < 0) (let
-                nixpkgs =
-                  inputs.nixos-23_05
-                  or inputs.nixos-unstable
-                  or (throw ("To have similar module arguments within containers as in nixos we need special argument support."
-                      + " This support has only be added in nixpkgs 23.05, so the nixpkgs channel 'nixos-23_05' or 'nixos-unstable' is required."));
-              in {
-                disabledModules = [ "virtualisation/nixos-containers.nix" ];
-                imports = [ (nixpkgs.outPath + "/nixos/modules/virtualisation/nixos-containers.nix") ];
-              })
-              ++ lib.singleton {
-                options.containers = lib.mkOption {
-                  type = attrsOf (submoduleWith {
-                    shorthandOnlyDefinesConfig = true;
-                    modules =
-                      mkDefaultModules "container" name
-                      ++ modules;
-                    specialArgs = mkSpecialArgs "container" args;
-                  });
-                };
-                config.containers.${name} = let
-                  args = configurationsArgs.nixos.${name};
+      container =
+        mkConfigurations configurationsArgs.container
+        ({
+            name,
+            inputs,
+            system,
+            channelName,
+            modules,
+            ...
+          } @ args: let
+            inherit (lib.types) attrsOf submoduleWith;
+          in
+            inputs.extra-container.lib.buildContainers {
+              inherit system;
+              nixpkgs = inputs.${channelName};
+              config.imports =
+                lib.optional (lib.compareVersions lib.trivial.release "23.05" < 0) (let
+                  nixpkgs =
+                    inputs.nixos-23_05
+                    or inputs.nixos-unstable
+                    or (throw ("To have similar module arguments within containers as in nixos we need special argument support."
+                        + " This support has only be added in nixpkgs 23.05, so the nixpkgs channel 'nixos-23_05' or 'nixos-unstable' is required."));
                 in {
-                  specialArgs = mkSpecialArgs "nixos" args;
-                  config.imports =
-                    mkNixosModules args
-                    ++ lib.optional (configurationsArgs.home ? ${name}) {
-                      systemd.services.fix-home-manager = {
-                        serviceConfig = {
-                          Type = "oneshot";
+                  disabledModules = [ "virtualisation/nixos-containers.nix" ];
+                  imports = [ (nixpkgs.outPath + "/nixos/modules/virtualisation/nixos-containers.nix") ];
+                })
+                ++ lib.singleton {
+                  options.containers = lib.mkOption {
+                    type = attrsOf (submoduleWith {
+                      shorthandOnlyDefinesConfig = true;
+                      modules =
+                        mkDefaultModules "container" name
+                        ++ modules;
+                      specialArgs = mkSpecialArgs "container" args;
+                    });
+                  };
+                  config.containers.${name} = let
+                    args = configurationsArgs.nixos.${name};
+                  in {
+                    specialArgs = mkSpecialArgs "nixos" args;
+                    config.imports =
+                      mkNixosModules args
+                      ++ lib.optional (configurationsArgs.home ? ${name}) {
+                        systemd.services.fix-home-manager = {
+                          serviceConfig = {
+                            Type = "oneshot";
+                          };
+                          script = lib.concatStrings (lib.mapAttrsToList (name: _: ''
+                              mkdir -p /nix/var/nix/{profiles,gcroots}/per-user/${name}
+                              chown ${name}:root /nix/var/nix/{profiles,gcroots}/per-user/${name}
+                            '')
+                            configurationsArgs.home.${name}.users);
+                          wantedBy = [ "multi-user.target" ];
                         };
-                        script = lib.concatStrings (lib.mapAttrsToList (name: _: ''
-                            mkdir -p /nix/var/nix/{profiles,gcroots}/per-user/${name}
-                            chown ${name}:root /nix/var/nix/{profiles,gcroots}/per-user/${name}
-                          '')
-                          configurationsArgs.home.${name}.users);
-                        wantedBy = [ "multi-user.target" ];
                       };
-                    };
+                  };
                 };
-              };
-          });
+            });
 
-    homeConfigurations =
-      mkConfigurations configurationsArgs.home
-      ({
-          name,
-          inputs,
-          pkgs,
-          stateVersion,
-          users,
-          ...
-        } @ args:
-          lib.mapAttrsToList (username: user:
-            lib.nameValuePair "${name}_${username}" (inputs.home-manager.lib.homeManagerConfiguration {
-              inherit pkgs;
-              extraSpecialArgs = mkSpecialArgs "home" args;
-              modules = mkHomeModules args username user;
-              check = true;
-            }))
-          users);
+      home =
+        mkConfigurations configurationsArgs.home
+        ({
+            name,
+            inputs,
+            pkgs,
+            stateVersion,
+            users,
+            ...
+          } @ args:
+            lib.mapAttrsToList (username: user:
+              lib.nameValuePair "${name}_${username}" (inputs.home-manager.lib.homeManagerConfiguration {
+                inherit pkgs;
+                extraSpecialArgs = mkSpecialArgs "home" args;
+                modules = mkHomeModules args username user;
+                check = true;
+              }))
+            users);
+    };
 
     flakeOutputs =
       {
-        inherit containerConfigurations homeConfigurations nixosConfigurations;
         inherit (config) overlays;
         formatter =
           lib.genAttrs config.systems (system:
             nixcfg.inputs.alejandra.defaultPackage.${system});
       }
+      // lib.mapAttrs' (type: lib.nameValuePair "${type}Configurations") configurations
       // lib.getAttrs (lib.concatMap (type: [ "${type}Modules" "${type}Profiles" ]) configurationTypes) config;
 
     customOutputs =
