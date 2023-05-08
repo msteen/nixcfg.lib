@@ -10,8 +10,9 @@
   concatAttrs = lib.foldl' (a: b: a // b) { };
   concatAttrsRecursive = lib.foldl' (a: b: lib.recursiveUpdate a b) { };
 
-  getAttrPath = path: attrs: lib.foldl' (attrs: name: lib.getAttr name attrs) attrs path;
-  mapGetAttrPath = path: list: lib.foldl' (list: name: map (lib.getAttr name) list) list path;
+  catAttrsPath = lib.flip (lib.foldl' (lib.flip lib.catAttrs));
+  getAttrPath = lib.flip (lib.foldl' (lib.flip lib.getAttr));
+  mapGetAttrPath = lib.flip (lib.foldl' (list: name: map (lib.getAttr name) list));
 
   updateLevels = levels: lhs: rhs: let
     recur = levels:

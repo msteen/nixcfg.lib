@@ -360,6 +360,16 @@
       expected = true;
     };
 
+    testChannels_3 = {
+      expr = let
+        example = exampleWith {
+          overlays.default = final: prev: { test = true; };
+        };
+      in
+        example.nixosConfigurations.ubuntu.pkgs ? test;
+      expected = true;
+    };
+
     testContainerConfigurationsArgs = {
       expr = example.containerConfigurationsArgs;
       expected = {

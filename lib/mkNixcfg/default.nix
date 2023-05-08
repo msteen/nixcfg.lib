@@ -140,13 +140,15 @@ in
         sops.defaultSopsFile = config.path + "/${type}/configs/${name}/secrets.yaml";
       };
 
+    defaultOverlays = lib.catAttrsPath [ "overlays" "default" ] nixcfgs;
+
     mkNixosModules = import ./mkNixosModules.nix {
-      inherit config lib mkDefaultModules mkHomeModules mkSpecialArgs nixcfgs;
+      inherit config defaultOverlays lib mkDefaultModules mkHomeModules mkSpecialArgs;
       homeConfigurationsArgs = configurationsArgs.home;
     };
 
     mkHomeModules = import ./mkHomeModules.nix {
-      inherit config lib mkDefaultModules nixcfgs;
+      inherit config defaultOverlays lib mkDefaultModules;
     };
 
     mkConfigurations = configurationsArgs: f:

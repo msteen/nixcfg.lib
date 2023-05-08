@@ -1,7 +1,7 @@
 {
   lib,
   config,
-  nixcfgs,
+  defaultOverlays,
   homeConfigurationsArgs,
   mkSpecialArgs,
   mkDefaultModules,
@@ -70,7 +70,7 @@ in
     networking.hostId = lib.mkDefault (lib.substring 0 8 (lib.hashString "sha256" name));
 
     nixpkgs.pkgs = lib.mkDefault pkgs;
-    nixpkgs.overlays = [ (final: prev: channels) ] ++ lib.catAttrs "overlay" nixcfgs;
+    nixpkgs.overlays = [ (final: prev: channels) ] ++ defaultOverlays;
 
     system.nixos.revision = lib.mkDefault config.system.configurationRevision;
     system.nixos.versionSuffix = lib.mkDefault ".${lib.substring 0 8 (self.lastModifiedDate or "19700101")}.${self.shortRev or "dirty"}";
