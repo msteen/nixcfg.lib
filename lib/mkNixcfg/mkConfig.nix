@@ -4,9 +4,8 @@
 }: config: let
 in
   (lib.evalModules {
-    specialArgs = { inherit lib nixcfg; };
     modules = [
-      ./modules/nixcfg.nix
+      (import ./modules/nixcfg.nix { inherit lib nixcfg; })
       {
         _file = (lib.unsafeGetAttrPos "name" config).file or null;
         inherit config;

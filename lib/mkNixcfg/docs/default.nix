@@ -33,8 +33,7 @@
 
   hmModulesDocs = buildModulesDocs {
     modules = [
-      { _module.args = { inherit nixcfg; }; }
-      ../modules/nixcfg.nix
+      (import ../modules/nixcfg.nix { inherit lib nixcfg; })
       scrubbedPkgsModule
     ];
     docBook.id = "nixcfg-options";
