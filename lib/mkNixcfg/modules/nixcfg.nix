@@ -122,7 +122,7 @@ in {
         type = types.lazyAttrsOf overlay;
         default = { };
         apply = overlays:
-          if overlays ? default
+          if overlays ? default && listedArgs ? overlay
           then throw "The overlay name 'default' is already reserved for the overlay defined in 'pkgs/overlay.nix'."
           else
             overlays
