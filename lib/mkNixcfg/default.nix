@@ -17,7 +17,7 @@
     hello = configuration: configuration.activationPackage;
   };
 
-  mkConfig = import ./mkConfig.nix { inherit lib nixcfg nixpkgs; };
+  mkConfig = import ./mkConfig.nix { inherit lib nixcfg; };
   mkNixcfgs = import ./mkNixcfgs.nix { inherit lib; };
   mkChannels = import ./mkChannels.nix { inherit lib; };
 
@@ -248,7 +248,7 @@ in
             users);
     };
 
-    packages = let
+    configurationPackages = let
       list = lib.concatMap (type:
         lib.mapAttrsToList (
           name: configuration: let
@@ -269,6 +269,15 @@ in
           lib.listToAttrs group)
         (lib.groupBy (x: x.type) group))
       (lib.groupBy (x: x.system) list);
+
+    docPackages = lib.genAttrs config.systems (system: {
+      manual = { inherit (import ./docs {
+        inherit lib nixcfg;
+        pkgs = nixcfgsChannels.${system}.nixpkgs;
+      }) html htmlOpenTool; };
+    });
+
+    packages = lib.updateLevels 1 configurationPackages docPackages;
 
     flakeOutputs =
       {
