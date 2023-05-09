@@ -272,11 +272,14 @@ in
         (lib.groupBy (x: x.type) group))
       (lib.groupBy (x: x.system) list);
 
-    docPackages = lib.genAttrs config.systems (system: {
-      manual = { inherit (import ./docs {
-        inherit lib nixcfg;
-        pkgs = nixcfgsChannels.${system}.nixpkgs;
-      }) html htmlOpenTool; };
+    docPackages = lib.genAttrs config.systems (system: let
+      pkgs = nixcfgsChannels.${system}.nixpkgs;
+    in {
+      manual = {
+        inherit (import ./docs {
+          inherit lib nixcfg pkgs;
+        }) html htmlOpenTool;
+      };
     });
 
     packages = lib.updateLevels 1 configurationPackages docPackages;

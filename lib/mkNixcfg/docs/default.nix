@@ -25,7 +25,7 @@
 
   buildModulesDocs = args:
     nmd.buildModulesDocs ({
-        moduleRootPaths = [ ./../../.. ];
+        moduleRootPaths = [ nixcfg.outPath ];
         mkModuleUrl = path: "https://github.com/msteen/nixcfg.lib/blob/master/${path}#blob-path";
         channelName = "nixcfg";
       }
@@ -47,8 +47,8 @@
     documentType = "book";
     chunkToc = ''
       <toc>
-        <d:tocentry xmlns:d="http://docbook.org/ns/docbook" linkend="book-nixcfg-manual"><?dbhtml filename="index.html"?>
-          <d:tocentry linkend="ch-options"><?dbhtml filename="options.html"?></d:tocentry>
+        <d:tocentry xmlns:d="http://docbook.org/ns/docbook" linkend="book-nixcfg-manual">
+            <?dbhtml filename="index.html"?>
         </d:tocentry>
       </toc>
     '';

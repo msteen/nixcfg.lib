@@ -1,6 +1,18 @@
 <reference xmlns="http://docbook.org/ns/docbook"
            xmlns:xlink="http://www.w3.org/1999/xlink"
            xmlns:xi="http://www.w3.org/2001/XInclude">
- <title>Nixcfg Reference Pages</title>
- <xi:include href="man-configuration.xml" />
+ <title>dummy</title>
+ <refentry>
+  <refmeta>
+   <refentrytitle>dummy</refentrytitle>
+  </refmeta>
+  <refnamediv>
+   <refname>dummy</refname>
+   <refpurpose>dummy</refpurpose>
+  </refnamediv>
+  <refsection>
+   <title>dummy</title>
+   <para>dummy</para>
+  </refsection>
+ </refentry>
 </reference>

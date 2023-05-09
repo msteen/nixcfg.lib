@@ -3,11 +3,8 @@
       xmlns:xi="http://www.w3.org/2001/XInclude"
       version="5.0"
       xml:id="book-nixcfg-manual">
- <info>
-  <title>Nixcfg Manual</title>
- </info>
- <appendix xml:id="ch-options">
-  <title>Configuration Options</title>
+ <chapter xml:id="ch-options">
+  <title>Options</title>
   <xi:include href="./nmd-result/nixcfg-options.xml" />
- </appendix>
+ </chapter>
 </book>
