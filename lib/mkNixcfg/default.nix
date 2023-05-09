@@ -250,7 +250,7 @@ in
             users);
     };
 
-    configurationPackages = let
+    packages = let
       list = lib.concatMap (type:
         lib.mapAttrsToList (
           name: configuration: let
@@ -271,18 +271,6 @@ in
           lib.listToAttrs group)
         (lib.groupBy (x: x.type) group))
       (lib.groupBy (x: x.system) list);
-
-    docPackages = lib.genAttrs config.systems (system: let
-      pkgs = nixcfgsChannels.${system}.nixpkgs;
-    in {
-      manual = {
-        inherit (import ./docs {
-          inherit lib nixcfg pkgs;
-        }) html htmlOpenTool;
-      };
-    });
-
-    packages = lib.updateLevels 1 configurationPackages docPackages;
 
     flakeOutputs =
       {

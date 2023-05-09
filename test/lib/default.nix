@@ -1,7 +1,10 @@
 {
-  lib,
-  nixpkgs,
+  nixcfg,
+  inputs,
 }: let
+  inherit (nixcfg.inputs) nixpkgs;
+  lib = nixcfg.lib // nixpkgs.lib // builtins;
+
   foo = lib.mkNixcfg {
     name = "foo";
     path = ./nixcfg-foo;
@@ -25,22 +28,22 @@
     };
   };
 
-  inherit ((
-      import
-      (
-        let
-          lock = lib.fromJSON (lib.readFile ./flake.lock);
-        in
-          lib.fetchTarball {
-            url = "https://github.com/edolstra/flake-compat/archive/${lock.nodes.flake-compat.locked.rev}.tar.gz";
-            sha256 = lock.nodes.flake-compat.locked.narHash;
-          }
-      )
-      { src = ./.; }
-    )
-    .defaultNix)
-    inputs
-    ;
+  # inherit ((
+  #     import
+  #     (
+  #       let
+  #         lock = lib.fromJSON (lib.readFile ./flake.lock);
+  #       in
+  #         lib.fetchTarball {
+  #           url = "https://github.com/edolstra/flake-compat/archive/${lock.nodes.flake-compat.locked.rev}.tar.gz";
+  #           sha256 = lock.nodes.flake-compat.locked.narHash;
+  #         }
+  #     )
+  #     { src = ./.; }
+  #   )
+  #   .defaultNix)
+  #   inputs
+  #   ;
 
   exampleWith = attrs: let
     self = lib.mkNixcfg (let

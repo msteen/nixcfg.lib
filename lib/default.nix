@@ -1,7 +1,7 @@
 {
   lib,
-  nixpkgs,
   nixcfg,
+  nixpkgs,
 }: {
   traceJSON = x: lib.trace (lib.toJSON x) x;
   traceJSONMap = f: x: lib.trace (lib.toJSON (f x)) x;
