@@ -291,6 +291,7 @@ in
         formatter =
           lib.genAttrs config.systems (system:
             nixcfg.inputs.alejandra.defaultPackage.${system});
+        legacyPackages = lib.mapAttrs (_: lib.getAttr "nixpkgs") nixcfgsChannels;
       }
       // lib.mapAttrs' (type: lib.nameValuePair "${type}Configurations") configurations
       // lib.getAttrs (lib.concatMap (type: [ "${type}Modules" "${type}Profiles" ]) configurationTypes) config;
