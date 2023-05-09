@@ -72,6 +72,8 @@ in
     nixpkgs.pkgs = lib.mkDefault pkgs;
     nixpkgs.overlays = [ (final: prev: channels) ] ++ defaultOverlays;
 
+    environment.systemPackages = [ self.formatter.${system} ];
+
     system.nixos.revision = lib.mkDefault config.system.configurationRevision;
     system.nixos.versionSuffix = lib.mkDefault ".${lib.substring 0 8 (self.lastModifiedDate or "19700101")}.${self.shortRev or "dirty"}";
     system.stateVersion = stateVersion;

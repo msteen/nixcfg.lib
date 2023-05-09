@@ -6,6 +6,7 @@
 }: {
   name,
   inputs,
+  system,
   stateVersion,
   channels,
   ...
@@ -16,8 +17,13 @@
 mkDefaultModules "home" name
 ++ lib.optional config.requireSops inputs.sops-nix.homeManagerModules.sops
 ++ modules
-++ lib.singleton {
+++ lib.singleton (let
+  inherit (config.inputs) self;
+in {
   nixpkgs.overlays = [ (final: prev: channels) ] ++ defaultOverlays;
-  home = { inherit homeDirectory stateVersion username; };
+  home = {
+    inherit homeDirectory stateVersion username;
+    packages = [ self.formatter.${system} ];
+  };
   programs.home-manager.enable = true;
-}
+})
