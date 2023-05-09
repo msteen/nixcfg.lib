@@ -26,40 +26,10 @@
       inherit lib nixcfg nixpkgs;
     };
 
-    # packages = lib.genAttrs [ "x86_64-linux" ] (system: let
-    #   pkgs = nixpkgs.legacyPackages.${system};
-    # in {
-    #   doc = (import ./lib/mkNixcfg/docs { inherit lib nixcfg pkgs; }).html;
-    # });
-
-    # checks = lib.genAttrs [ "x86_64-linux" ] (system: let
-    #   pkgs = nixpkgs.legacyPackages.${system};
-    #   alejandra = inputs.alejandra.defaultPackage.${system};
-    # in {
-    #   # tests = pkgs.writeShellApplication {
-    #   #   name = "tests";
-    #   #   runtimeInputs = [ alejandra ];
-    #   #   text = ''
-    #   #     out=$(nix eval ${toString ./test/lib}#tests)
-    #   #     if [[ $out == null ]]; then
-    #   #       echo "all tests passed"
-    #   #     else
-    #   #       echo "some tests failed:"
-    #   #       alejandra -q <<< "$out"
-    #   #       exit 1
-    #   #     fi
-    #   #   '';
-    #   # };
-    #   # tests = pkgs.runCommand "tests" { buildInputs = [ pkgs.nix alejandra ]; } ''
-    #   #   out=$(nix --extra-experimental-features nix-command eval ${toString ./test/lib}#tests)
-    #   #   if [[ $out == null ]]; then
-    #   #     echo "all tests passed"
-    #   #   else
-    #   #     echo "some tests failed:"
-    #   #     alejandra <<< "$out"
-    #   #     exit 1
-    #   #   fi
-    #   # '';
-    # });
+    packages = lib.genAttrs [ "x86_64-linux" ] (system: let
+      pkgs = nixpkgs.legacyPackages.${system};
+    in {
+      doc = (import ./lib/mkNixcfg/docs { inherit lib nixcfg pkgs; }).html;
+    });
   };
 }
