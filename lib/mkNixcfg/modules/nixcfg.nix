@@ -127,7 +127,7 @@ in {
           else
             overlays
             // lib.optionalAttrs (listedArgs ? overlay) {
-              default = listedArgs.overlay;
+              default = import listedArgs.overlay;
             };
         description = ''
           The nixpkgs overlays that can be used to extend a nixpkgs channel.
