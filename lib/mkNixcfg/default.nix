@@ -63,9 +63,9 @@ in
 
     libOverlays = lib.singleton (final: prev: { lib = nixpkgsLib; }) ++ config.lib.overlays;
 
-    nixpkgsLib = libNixpkgs.lib.extend (final: prev: { input = libNixpkgs; });
+    nixpkgsLib = libNixpkgs.lib.extend (final: prev: { input = libNixpkgs; } // builtins);
     nixcfgsLib = lib.extendsList (lib.concatLists (lib.catAttrs "libOverlays" nixcfgs)) (final: nixcfg.lib);
-    outputLib = nixcfgsLib // nixpkgsLib // builtins;
+    outputLib = nixpkgsLib.extend (final: prev: nixcfgsLib);
 
     mkChannels' = mkChannels {
       nixcfgsOverlays = lib.mapAttrs (_: lib.getAttr "overlays") nixcfgsAttrs;
