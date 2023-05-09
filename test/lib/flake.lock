@@ -152,13 +152,13 @@
         "nixpkgs": "nixpkgs"
       },
       "locked": {
-        "lastModified": 1683655539,
-        "narHash": "sha256-xD0IT21ethyaedq3ylxs7bjbkGmjHPQ+ftXNA2Kwf0E=",
-        "path": "/home/matthijs/Code/nixcfg.lib",
+        "lastModified": 0,
+        "narHash": "sha256-A4kSN72CyeTNxXJbHBqWCsN/cdGmwX+3Jqesk2QxjyM=",
+        "path": "../..",
         "type": "path"
       },
       "original": {
-        "path": "/home/matthijs/Code/nixcfg.lib",
+        "path": "../..",
         "type": "path"
       }
     },
