@@ -1,0 +1,223 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title></title><link rel="stylesheet" type="text/css" href="style.css" /><script src="highlight.min.js" type="text/javascript"></script><script src="highlight.load.js" type="text/javascript"></script><meta name="generator" content="DocBook XSL Stylesheets V1.79.2" /><link rel="home" href="index.html" title="" /></head><body><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center"></th></tr></table><hr /></div><div class="book"><div class="titlepage"><hr /></div><div class="toc"><dl class="toc"><dt><span class="chapter"><a href="index.html#ch-options">1. Options</a></span></dt></dl></div><div class="chapter"><div class="titlepage"><div><div><h1 class="title"><a id="ch-options"></a>Chapter 1. Options</h1></div></div></div><div class="variablelist"><a id="nixcfg-options"></a><dl class="variablelist"><dt><span class="term"><a id="opt-channels"></a><a class="term" href="index.html#opt-channels"><code class="option">channels</code></a></span></dt><dd><p>The set of nixpkgs channels made available for use in the configurations.
+They are made available as a nixpkgs overlay on the channel selected for the configuration.</p><p><span class="emphasis"><em>Type:</em></span> lazy attribute set of (submodule)</p><p><span class="emphasis"><em>Default:</em></span> <code class="literal">
+        {
+        
+        }
+    </code></p><p><span class="emphasis"><em>Declared by:</em></span></p><table border="0" summary="Simple list" class="simplelist"><tr><td><code class="filename"><a class="filename" href="https://github.com/msteen/nixcfg.lib/blob/master/lib/mkNixcfg/modules#blob-path" target="_top">
+                    &lt;nixcfg/lib/mkNixcfg/modules&gt;
+                </a></code></td></tr></table></dd><dt><span class="term"><a id="opt-channels._name_.config"></a><a class="term" href="index.html#opt-channels._name_.config"><code class="option">channels.&lt;name&gt;.config</code></a></span></dt><dd><p>The nixpkgs config that should be used for this channel.
+By default all channels allow unfree packages.</p><p><span class="emphasis"><em>Type:</em></span> attribute set</p><p><span class="emphasis"><em>Default:</em></span> <code class="literal">
+        {
+        
+        }
+    </code></p><p><span class="emphasis"><em>Declared by:</em></span></p><table border="0" summary="Simple list" class="simplelist"><tr><td><code class="filename"><a class="filename" href="https://github.com/msteen/nixcfg.lib/blob/master/lib/mkNixcfg/modules#blob-path" target="_top">
+                    &lt;nixcfg/lib/mkNixcfg/modules&gt;
+                </a></code></td></tr></table></dd><dt><span class="term"><a id="opt-channels._name_.input"></a><a class="term" href="index.html#opt-channels._name_.input"><code class="option">channels.&lt;name&gt;.input</code></a></span></dt><dd><p>The nixpkgs flake input that should be used for this channel.</p><p><span class="emphasis"><em>Type:</em></span> null or raw value</p><p><span class="emphasis"><em>Default:</em></span> <code class="literal">null</code></p><p><span class="emphasis"><em>Declared by:</em></span></p><table border="0" summary="Simple list" class="simplelist"><tr><td><code class="filename"><a class="filename" href="https://github.com/msteen/nixcfg.lib/blob/master/lib/mkNixcfg/modules#blob-path" target="_top">
+                    &lt;nixcfg/lib/mkNixcfg/modules&gt;
+                </a></code></td></tr></table></dd><dt><span class="term"><a id="opt-channels._name_.overlays"></a><a class="term" href="index.html#opt-channels._name_.overlays"><code class="option">channels.&lt;name&gt;.overlays</code></a></span></dt><dd><p>The list of nixpkgs overlays that should be used for this channel.</p><p><span class="emphasis"><em>Type:</em></span> (list of (overlay)) or function that evaluates to a(n) list of (overlay)</p><p><span class="emphasis"><em>Default:</em></span> <code class="literal">
+        [
+        
+        ]
+    </code></p><p><span class="emphasis"><em>Declared by:</em></span></p><table border="0" summary="Simple list" class="simplelist"><tr><td><code class="filename"><a class="filename" href="https://github.com/msteen/nixcfg.lib/blob/master/lib/mkNixcfg/modules#blob-path" target="_top">
+                    &lt;nixcfg/lib/mkNixcfg/modules&gt;
+                </a></code></td></tr></table></dd><dt><span class="term"><a id="opt-channels._name_.patches"></a><a class="term" href="index.html#opt-channels._name_.patches"><code class="option">channels.&lt;name&gt;.patches</code></a></span></dt><dd><p>The list of patches that should be applied to the nixpkgs input of this channel.</p><p><span class="emphasis"><em>Type:</em></span> list of path</p><p><span class="emphasis"><em>Default:</em></span> <code class="literal">
+        [
+        
+        ]
+    </code></p><p><span class="emphasis"><em>Declared by:</em></span></p><table border="0" summary="Simple list" class="simplelist"><tr><td><code class="filename"><a class="filename" href="https://github.com/msteen/nixcfg.lib/blob/master/lib/mkNixcfg/modules#blob-path" target="_top">
+                    &lt;nixcfg/lib/mkNixcfg/modules&gt;
+                </a></code></td></tr></table></dd><dt><span class="term"><a id="opt-containerConfigurations"></a><a class="term" href="index.html#opt-containerConfigurations"><code class="option">containerConfigurations</code></a></span></dt><dd><p>The set of container configurations.
+These are nixos containers, i.e. systemd containers.</p><p><span class="emphasis"><em>Type:</em></span> lazy attribute set of (submodule)</p><p><span class="emphasis"><em>Default:</em></span> <code class="literal">
+        {
+        
+        }
+    </code></p><p><span class="emphasis"><em>Declared by:</em></span></p><table border="0" summary="Simple list" class="simplelist"><tr><td><code class="filename"><a class="filename" href="https://github.com/msteen/nixcfg.lib/blob/master/lib/mkNixcfg/modules#blob-path" target="_top">
+                    &lt;nixcfg/lib/mkNixcfg/modules&gt;
+                </a></code></td></tr></table></dd><dt><span class="term"><a id="opt-containerConfigurations._name_.channelName"></a><a class="term" href="index.html#opt-containerConfigurations._name_.channelName"><code class="option">containerConfigurations.&lt;name&gt;.channelName</code></a></span></dt><dd><p>The channel that should be used for this container configuration.</p><p><span class="emphasis"><em>Type:</em></span> string</p><p><span class="emphasis"><em>Default:</em></span> <code class="literal">"nixpkgs"</code></p><p><span class="emphasis"><em>Declared by:</em></span></p><table border="0" summary="Simple list" class="simplelist"><tr><td><code class="filename"><a class="filename" href="https://github.com/msteen/nixcfg.lib/blob/master/lib/mkNixcfg/modules#blob-path" target="_top">
+                    &lt;nixcfg/lib/mkNixcfg/modules&gt;
+                </a></code></td></tr></table></dd><dt><span class="term"><a id="opt-containerConfigurations._name_.inputs"></a><a class="term" href="index.html#opt-containerConfigurations._name_.inputs"><code class="option">containerConfigurations.&lt;name&gt;.inputs</code></a></span></dt><dd><p>The flake inputs of this container configuration.
+They extend those of the nixcfg.</p><p><span class="emphasis"><em>Type:</em></span> lazy attribute set of raw value</p><p><span class="emphasis"><em>Default:</em></span> <code class="literal">
+        {
+        
+        }
+    </code></p><p><span class="emphasis"><em>Declared by:</em></span></p><table border="0" summary="Simple list" class="simplelist"><tr><td><code class="filename"><a class="filename" href="https://github.com/msteen/nixcfg.lib/blob/master/lib/mkNixcfg/modules#blob-path" target="_top">
+                    &lt;nixcfg/lib/mkNixcfg/modules&gt;
+                </a></code></td></tr></table></dd><dt><span class="term"><a id="opt-containerConfigurations._name_.moduleArgs"></a><a class="term" href="index.html#opt-containerConfigurations._name_.moduleArgs"><code class="option">containerConfigurations.&lt;name&gt;.moduleArgs</code></a></span></dt><dd><p>The list of arguments that should be passed to the module system evaluation for this container configuration.</p><p><span class="emphasis"><em>Type:</em></span> lazy attribute set of raw value</p><p><span class="emphasis"><em>Default:</em></span> <code class="literal">
+        {
+        
+        }
+    </code></p><p><span class="emphasis"><em>Declared by:</em></span></p><table border="0" summary="Simple list" class="simplelist"><tr><td><code class="filename"><a class="filename" href="https://github.com/msteen/nixcfg.lib/blob/master/lib/mkNixcfg/modules#blob-path" target="_top">
+                    &lt;nixcfg/lib/mkNixcfg/modules&gt;
+                </a></code></td></tr></table></dd><dt><span class="term"><a id="opt-containerConfigurations._name_.modules"></a><a class="term" href="index.html#opt-containerConfigurations._name_.modules"><code class="option">containerConfigurations.&lt;name&gt;.modules</code></a></span></dt><dd><p>The list of container modules that represent this container configuration.
+By default, if there exist a container configuration file, it will be added to this list.</p><p><span class="emphasis"><em>Type:</em></span> list of raw value</p><p><span class="emphasis"><em>Default:</em></span> <code class="literal">
+        [
+        
+        ]
+    </code></p><p><span class="emphasis"><em>Declared by:</em></span></p><table border="0" summary="Simple list" class="simplelist"><tr><td><code class="filename"><a class="filename" href="https://github.com/msteen/nixcfg.lib/blob/master/lib/mkNixcfg/modules#blob-path" target="_top">
+                    &lt;nixcfg/lib/mkNixcfg/modules&gt;
+                </a></code></td></tr></table></dd><dt><span class="term"><a id="opt-containerConfigurations._name_.stateVersion"></a><a class="term" href="index.html#opt-containerConfigurations._name_.stateVersion"><code class="option">containerConfigurations.&lt;name&gt;.stateVersion</code></a></span></dt><dd><p>The state version of this container configuration.
+By default the latest stable nixos version is used.</p><p><span class="emphasis"><em>Type:</em></span> string</p><p><span class="emphasis"><em>Default:</em></span> <code class="literal">"22.11"</code></p><p><span class="emphasis"><em>Declared by:</em></span></p><table border="0" summary="Simple list" class="simplelist"><tr><td><code class="filename"><a class="filename" href="https://github.com/msteen/nixcfg.lib/blob/master/lib/mkNixcfg/modules#blob-path" target="_top">
+                    &lt;nixcfg/lib/mkNixcfg/modules&gt;
+                </a></code></td></tr></table></dd><dt><span class="term"><a id="opt-containerConfigurations._name_.system"></a><a class="term" href="index.html#opt-containerConfigurations._name_.system"><code class="option">containerConfigurations.&lt;name&gt;.system</code></a></span></dt><dd><p>The system of this container configuration.</p><p><span class="emphasis"><em>Type:</em></span> string</p><p><span class="emphasis"><em>Default:</em></span> <code class="literal">"x86_64-linux"</code></p><p><span class="emphasis"><em>Declared by:</em></span></p><table border="0" summary="Simple list" class="simplelist"><tr><td><code class="filename"><a class="filename" href="https://github.com/msteen/nixcfg.lib/blob/master/lib/mkNixcfg/modules#blob-path" target="_top">
+                    &lt;nixcfg/lib/mkNixcfg/modules&gt;
+                </a></code></td></tr></table></dd><dt><span class="term"><a id="opt-containerModules"></a><a class="term" href="index.html#opt-containerModules"><code class="option">containerModules</code></a></span></dt><dd><p>The set of container modules made available in container configurations.</p><p><span class="emphasis"><em>Type:</em></span> attribute set of path</p><p><span class="emphasis"><em>Default:</em></span> <code class="literal">
+        {
+        
+        }
+    </code></p><p><span class="emphasis"><em>Declared by:</em></span></p><table border="0" summary="Simple list" class="simplelist"><tr><td><code class="filename"><a class="filename" href="https://github.com/msteen/nixcfg.lib/blob/master/lib/mkNixcfg/modules#blob-path" target="_top">
+                    &lt;nixcfg/lib/mkNixcfg/modules&gt;
+                </a></code></td></tr></table></dd><dt><span class="term"><a id="opt-containerProfiles"></a><a class="term" href="index.html#opt-containerProfiles"><code class="option">containerProfiles</code></a></span></dt><dd><p>The set of container profiles made available in container configurations.</p><p><span class="emphasis"><em>Type:</em></span> attribute set of path</p><p><span class="emphasis"><em>Default:</em></span> <code class="literal">
+        {
+        
+        }
+    </code></p><p><span class="emphasis"><em>Declared by:</em></span></p><table border="0" summary="Simple list" class="simplelist"><tr><td><code class="filename"><a class="filename" href="https://github.com/msteen/nixcfg.lib/blob/master/lib/mkNixcfg/modules#blob-path" target="_top">
+                    &lt;nixcfg/lib/mkNixcfg/modules&gt;
+                </a></code></td></tr></table></dd><dt><span class="term"><a id="opt-data"></a><a class="term" href="index.html#opt-data"><code class="option">data</code></a></span></dt><dd><p>Arbitrary Nix expressions that can be shared between configurations.</p><p><span class="emphasis"><em>Type:</em></span> lazy attribute set of raw value</p><p><span class="emphasis"><em>Default:</em></span> <code class="literal">
+        {
+        
+        }
+    </code></p><p><span class="emphasis"><em>Declared by:</em></span></p><table border="0" summary="Simple list" class="simplelist"><tr><td><code class="filename"><a class="filename" href="https://github.com/msteen/nixcfg.lib/blob/master/lib/mkNixcfg/modules#blob-path" target="_top">
+                    &lt;nixcfg/lib/mkNixcfg/modules&gt;
+                </a></code></td></tr></table></dd><dt><span class="term"><a id="opt-homeConfigurations"></a><a class="term" href="index.html#opt-homeConfigurations"><code class="option">homeConfigurations</code></a></span></dt><dd><p>The set of home configurations.
+If a home configuration shares a name with a nixos configuration,
+it will be embedded in the nixos configuration, yet will still be made available seperately.</p><p><span class="emphasis"><em>Type:</em></span> lazy attribute set of (submodule)</p><p><span class="emphasis"><em>Default:</em></span> <code class="literal">
+        {
+        
+        }
+    </code></p><p><span class="emphasis"><em>Declared by:</em></span></p><table border="0" summary="Simple list" class="simplelist"><tr><td><code class="filename"><a class="filename" href="https://github.com/msteen/nixcfg.lib/blob/master/lib/mkNixcfg/modules#blob-path" target="_top">
+                    &lt;nixcfg/lib/mkNixcfg/modules&gt;
+                </a></code></td></tr></table></dd><dt><span class="term"><a id="opt-homeConfigurations._name_.channelName"></a><a class="term" href="index.html#opt-homeConfigurations._name_.channelName"><code class="option">homeConfigurations.&lt;name&gt;.channelName</code></a></span></dt><dd><p>The channel that should be used for this home configuration.</p><p><span class="emphasis"><em>Type:</em></span> string</p><p><span class="emphasis"><em>Default:</em></span> <code class="literal">"nixpkgs"</code></p><p><span class="emphasis"><em>Declared by:</em></span></p><table border="0" summary="Simple list" class="simplelist"><tr><td><code class="filename"><a class="filename" href="https://github.com/msteen/nixcfg.lib/blob/master/lib/mkNixcfg/modules#blob-path" target="_top">
+                    &lt;nixcfg/lib/mkNixcfg/modules&gt;
+                </a></code></td></tr></table></dd><dt><span class="term"><a id="opt-homeConfigurations._name_.inputs"></a><a class="term" href="index.html#opt-homeConfigurations._name_.inputs"><code class="option">homeConfigurations.&lt;name&gt;.inputs</code></a></span></dt><dd><p>The flake inputs of this home configuration.
+They extend those of the nixcfg.</p><p><span class="emphasis"><em>Type:</em></span> lazy attribute set of raw value</p><p><span class="emphasis"><em>Default:</em></span> <code class="literal">
+        {
+        
+        }
+    </code></p><p><span class="emphasis"><em>Declared by:</em></span></p><table border="0" summary="Simple list" class="simplelist"><tr><td><code class="filename"><a class="filename" href="https://github.com/msteen/nixcfg.lib/blob/master/lib/mkNixcfg/modules#blob-path" target="_top">
+                    &lt;nixcfg/lib/mkNixcfg/modules&gt;
+                </a></code></td></tr></table></dd><dt><span class="term"><a id="opt-homeConfigurations._name_.moduleArgs"></a><a class="term" href="index.html#opt-homeConfigurations._name_.moduleArgs"><code class="option">homeConfigurations.&lt;name&gt;.moduleArgs</code></a></span></dt><dd><p>The list of arguments that should be passed to the module system evaluation for this home configuration.</p><p><span class="emphasis"><em>Type:</em></span> lazy attribute set of raw value</p><p><span class="emphasis"><em>Default:</em></span> <code class="literal">
+        {
+        
+        }
+    </code></p><p><span class="emphasis"><em>Declared by:</em></span></p><table border="0" summary="Simple list" class="simplelist"><tr><td><code class="filename"><a class="filename" href="https://github.com/msteen/nixcfg.lib/blob/master/lib/mkNixcfg/modules#blob-path" target="_top">
+                    &lt;nixcfg/lib/mkNixcfg/modules&gt;
+                </a></code></td></tr></table></dd><dt><span class="term"><a id="opt-homeConfigurations._name_.stateVersion"></a><a class="term" href="index.html#opt-homeConfigurations._name_.stateVersion"><code class="option">homeConfigurations.&lt;name&gt;.stateVersion</code></a></span></dt><dd><p>The state version of this home configuration.
+By default the latest stable nixos version is used.</p><p><span class="emphasis"><em>Type:</em></span> string</p><p><span class="emphasis"><em>Default:</em></span> <code class="literal">"22.11"</code></p><p><span class="emphasis"><em>Declared by:</em></span></p><table border="0" summary="Simple list" class="simplelist"><tr><td><code class="filename"><a class="filename" href="https://github.com/msteen/nixcfg.lib/blob/master/lib/mkNixcfg/modules#blob-path" target="_top">
+                    &lt;nixcfg/lib/mkNixcfg/modules&gt;
+                </a></code></td></tr></table></dd><dt><span class="term"><a id="opt-homeConfigurations._name_.system"></a><a class="term" href="index.html#opt-homeConfigurations._name_.system"><code class="option">homeConfigurations.&lt;name&gt;.system</code></a></span></dt><dd><p>The system of this home configuration.</p><p><span class="emphasis"><em>Type:</em></span> string</p><p><span class="emphasis"><em>Default:</em></span> <code class="literal">"x86_64-linux"</code></p><p><span class="emphasis"><em>Declared by:</em></span></p><table border="0" summary="Simple list" class="simplelist"><tr><td><code class="filename"><a class="filename" href="https://github.com/msteen/nixcfg.lib/blob/master/lib/mkNixcfg/modules#blob-path" target="_top">
+                    &lt;nixcfg/lib/mkNixcfg/modules&gt;
+                </a></code></td></tr></table></dd><dt><span class="term"><a id="opt-homeConfigurations._name_.users"></a><a class="term" href="index.html#opt-homeConfigurations._name_.users"><code class="option">homeConfigurations.&lt;name&gt;.users</code></a></span></dt><dd><p><span class="emphasis"><em>Type:</em></span> lazy attribute set of (submodule)</p><p><span class="emphasis"><em>Default:</em></span> <code class="literal">
+        {
+        
+        }
+    </code></p><p><span class="emphasis"><em>Declared by:</em></span></p><table border="0" summary="Simple list" class="simplelist"><tr><td><code class="filename"><a class="filename" href="https://github.com/msteen/nixcfg.lib/blob/master/lib/mkNixcfg/modules#blob-path" target="_top">
+                    &lt;nixcfg/lib/mkNixcfg/modules&gt;
+                </a></code></td></tr></table></dd><dt><span class="term"><a id="opt-homeConfigurations._name_.users._name_.homeDirectory"></a><a class="term" href="index.html#opt-homeConfigurations._name_.users._name_.homeDirectory"><code class="option">homeConfigurations.&lt;name&gt;.users.&lt;name&gt;.homeDirectory</code></a></span></dt><dd><p><span class="emphasis"><em>Type:</em></span> path</p><p><span class="emphasis"><em>Default:</em></span> <code class="literal">"/home/‹name›"</code></p><p><span class="emphasis"><em>Declared by:</em></span></p><table border="0" summary="Simple list" class="simplelist"><tr><td><code class="filename"><a class="filename" href="https://github.com/msteen/nixcfg.lib/blob/master/lib/mkNixcfg/modules#blob-path" target="_top">
+                    &lt;nixcfg/lib/mkNixcfg/modules&gt;
+                </a></code></td></tr></table></dd><dt><span class="term"><a id="opt-homeConfigurations._name_.users._name_.modules"></a><a class="term" href="index.html#opt-homeConfigurations._name_.users._name_.modules"><code class="option">homeConfigurations.&lt;name&gt;.users.&lt;name&gt;.modules</code></a></span></dt><dd><p>The list of home modules that represent this home configuration.
+By default, if there exist a home configuration file, it will be added to this list.</p><p><span class="emphasis"><em>Type:</em></span> list of raw value</p><p><span class="emphasis"><em>Default:</em></span> <code class="literal">
+        [
+        
+        ]
+    </code></p><p><span class="emphasis"><em>Declared by:</em></span></p><table border="0" summary="Simple list" class="simplelist"><tr><td><code class="filename"><a class="filename" href="https://github.com/msteen/nixcfg.lib/blob/master/lib/mkNixcfg/modules#blob-path" target="_top">
+                    &lt;nixcfg/lib/mkNixcfg/modules&gt;
+                </a></code></td></tr></table></dd><dt><span class="term"><a id="opt-homeModules"></a><a class="term" href="index.html#opt-homeModules"><code class="option">homeModules</code></a></span></dt><dd><p>The set of home modules made available in home configurations.</p><p><span class="emphasis"><em>Type:</em></span> attribute set of path</p><p><span class="emphasis"><em>Default:</em></span> <code class="literal">
+        {
+        
+        }
+    </code></p><p><span class="emphasis"><em>Declared by:</em></span></p><table border="0" summary="Simple list" class="simplelist"><tr><td><code class="filename"><a class="filename" href="https://github.com/msteen/nixcfg.lib/blob/master/lib/mkNixcfg/modules#blob-path" target="_top">
+                    &lt;nixcfg/lib/mkNixcfg/modules&gt;
+                </a></code></td></tr></table></dd><dt><span class="term"><a id="opt-homeProfiles"></a><a class="term" href="index.html#opt-homeProfiles"><code class="option">homeProfiles</code></a></span></dt><dd><p>The set of home profiles made available in home configurations.</p><p><span class="emphasis"><em>Type:</em></span> attribute set of path</p><p><span class="emphasis"><em>Default:</em></span> <code class="literal">
+        {
+        
+        }
+    </code></p><p><span class="emphasis"><em>Declared by:</em></span></p><table border="0" summary="Simple list" class="simplelist"><tr><td><code class="filename"><a class="filename" href="https://github.com/msteen/nixcfg.lib/blob/master/lib/mkNixcfg/modules#blob-path" target="_top">
+                    &lt;nixcfg/lib/mkNixcfg/modules&gt;
+                </a></code></td></tr></table></dd><dt><span class="term"><a id="opt-inputs"></a><a class="term" href="index.html#opt-inputs"><code class="option">inputs</code></a></span></dt><dd><p>The flake inputs of this nixcfg.
+The self input, i.e. the self-reference, is expected to be available.
+It's metadata is used for setting various defaults.</p><p><span class="emphasis"><em>Type:</em></span> lazy attribute set of raw value</p><p><span class="emphasis"><em>Declared by:</em></span></p><table border="0" summary="Simple list" class="simplelist"><tr><td><code class="filename"><a class="filename" href="https://github.com/msteen/nixcfg.lib/blob/master/lib/mkNixcfg/modules#blob-path" target="_top">
+                    &lt;nixcfg/lib/mkNixcfg/modules&gt;
+                </a></code></td></tr></table></dd><dt><span class="term"><a id="opt-inputs.self"></a><a class="term" href="index.html#opt-inputs.self"><code class="option">inputs.self</code></a></span></dt><dd><p><span class="emphasis"><em>Type:</em></span> raw value</p><p><span class="emphasis"><em>Declared by:</em></span></p><table border="0" summary="Simple list" class="simplelist"><tr><td><code class="filename"><a class="filename" href="https://github.com/msteen/nixcfg.lib/blob/master/lib/mkNixcfg/modules#blob-path" target="_top">
+                    &lt;nixcfg/lib/mkNixcfg/modules&gt;
+                </a></code></td></tr></table></dd><dt><span class="term"><a id="opt-lib"></a><a class="term" href="index.html#opt-lib"><code class="option">lib</code></a></span></dt><dd><p>The extended lib made available as an output and passed to the module system.</p><p><span class="emphasis"><em>Type:</em></span> submodule</p><p><span class="emphasis"><em>Default:</em></span> <code class="literal">
+        {
+        
+        }
+    </code></p><p><span class="emphasis"><em>Declared by:</em></span></p><table border="0" summary="Simple list" class="simplelist"><tr><td><code class="filename"><a class="filename" href="https://github.com/msteen/nixcfg.lib/blob/master/lib/mkNixcfg/modules#blob-path" target="_top">
+                    &lt;nixcfg/lib/mkNixcfg/modules&gt;
+                </a></code></td></tr></table></dd><dt><span class="term"><a id="opt-lib.channelName"></a><a class="term" href="index.html#opt-lib.channelName"><code class="option">lib.channelName</code></a></span></dt><dd><p>The channel that should be used for this lib configuration.</p><p><span class="emphasis"><em>Type:</em></span> string</p><p><span class="emphasis"><em>Default:</em></span> <code class="literal">"nixpkgs"</code></p><p><span class="emphasis"><em>Declared by:</em></span></p><table border="0" summary="Simple list" class="simplelist"><tr><td><code class="filename"><a class="filename" href="https://github.com/msteen/nixcfg.lib/blob/master/lib/mkNixcfg/modules#blob-path" target="_top">
+                    &lt;nixcfg/lib/mkNixcfg/modules&gt;
+                </a></code></td></tr></table></dd><dt><span class="term"><a id="opt-lib.overlays"></a><a class="term" href="index.html#opt-lib.overlays"><code class="option">lib.overlays</code></a></span></dt><dd><p>The list of lib overlays that should be used for this lib.</p><p><span class="emphasis"><em>Type:</em></span> list of (overlay)</p><p><span class="emphasis"><em>Default:</em></span> <code class="literal">
+        [
+        
+        ]
+    </code></p><p><span class="emphasis"><em>Declared by:</em></span></p><table border="0" summary="Simple list" class="simplelist"><tr><td><code class="filename"><a class="filename" href="https://github.com/msteen/nixcfg.lib/blob/master/lib/mkNixcfg/modules#blob-path" target="_top">
+                    &lt;nixcfg/lib/mkNixcfg/modules&gt;
+                </a></code></td></tr></table></dd><dt><span class="term"><a id="opt-name"></a><a class="term" href="index.html#opt-name"><code class="option">name</code></a></span></dt><dd><p>The name used to refer to this nixcfg.</p><p><span class="emphasis"><em>Type:</em></span> string</p><p><span class="emphasis"><em>Declared by:</em></span></p><table border="0" summary="Simple list" class="simplelist"><tr><td><code class="filename"><a class="filename" href="https://github.com/msteen/nixcfg.lib/blob/master/lib/mkNixcfg/modules#blob-path" target="_top">
+                    &lt;nixcfg/lib/mkNixcfg/modules&gt;
+                </a></code></td></tr></table></dd><dt><span class="term"><a id="opt-nixosConfigurations"></a><a class="term" href="index.html#opt-nixosConfigurations"><code class="option">nixosConfigurations</code></a></span></dt><dd><p>The set of nixos configurations.
+If a nixos configuration shares a name with a container configuration,
+it will be used for the container and not be made available seperately.</p><p><span class="emphasis"><em>Type:</em></span> lazy attribute set of (submodule)</p><p><span class="emphasis"><em>Default:</em></span> <code class="literal">
+        {
+        
+        }
+    </code></p><p><span class="emphasis"><em>Declared by:</em></span></p><table border="0" summary="Simple list" class="simplelist"><tr><td><code class="filename"><a class="filename" href="https://github.com/msteen/nixcfg.lib/blob/master/lib/mkNixcfg/modules#blob-path" target="_top">
+                    &lt;nixcfg/lib/mkNixcfg/modules&gt;
+                </a></code></td></tr></table></dd><dt><span class="term"><a id="opt-nixosConfigurations._name_.channelName"></a><a class="term" href="index.html#opt-nixosConfigurations._name_.channelName"><code class="option">nixosConfigurations.&lt;name&gt;.channelName</code></a></span></dt><dd><p>The channel that should be used for this nixos configuration.</p><p><span class="emphasis"><em>Type:</em></span> string</p><p><span class="emphasis"><em>Default:</em></span> <code class="literal">"nixpkgs"</code></p><p><span class="emphasis"><em>Declared by:</em></span></p><table border="0" summary="Simple list" class="simplelist"><tr><td><code class="filename"><a class="filename" href="https://github.com/msteen/nixcfg.lib/blob/master/lib/mkNixcfg/modules#blob-path" target="_top">
+                    &lt;nixcfg/lib/mkNixcfg/modules&gt;
+                </a></code></td></tr></table></dd><dt><span class="term"><a id="opt-nixosConfigurations._name_.inputs"></a><a class="term" href="index.html#opt-nixosConfigurations._name_.inputs"><code class="option">nixosConfigurations.&lt;name&gt;.inputs</code></a></span></dt><dd><p>The flake inputs of this nixos configuration.
+They extend those of the nixcfg.</p><p><span class="emphasis"><em>Type:</em></span> lazy attribute set of raw value</p><p><span class="emphasis"><em>Default:</em></span> <code class="literal">
+        {
+        
+        }
+    </code></p><p><span class="emphasis"><em>Declared by:</em></span></p><table border="0" summary="Simple list" class="simplelist"><tr><td><code class="filename"><a class="filename" href="https://github.com/msteen/nixcfg.lib/blob/master/lib/mkNixcfg/modules#blob-path" target="_top">
+                    &lt;nixcfg/lib/mkNixcfg/modules&gt;
+                </a></code></td></tr></table></dd><dt><span class="term"><a id="opt-nixosConfigurations._name_.moduleArgs"></a><a class="term" href="index.html#opt-nixosConfigurations._name_.moduleArgs"><code class="option">nixosConfigurations.&lt;name&gt;.moduleArgs</code></a></span></dt><dd><p>The list of arguments that should be passed to the module system evaluation for this nixos configuration.</p><p><span class="emphasis"><em>Type:</em></span> lazy attribute set of raw value</p><p><span class="emphasis"><em>Default:</em></span> <code class="literal">
+        {
+        
+        }
+    </code></p><p><span class="emphasis"><em>Declared by:</em></span></p><table border="0" summary="Simple list" class="simplelist"><tr><td><code class="filename"><a class="filename" href="https://github.com/msteen/nixcfg.lib/blob/master/lib/mkNixcfg/modules#blob-path" target="_top">
+                    &lt;nixcfg/lib/mkNixcfg/modules&gt;
+                </a></code></td></tr></table></dd><dt><span class="term"><a id="opt-nixosConfigurations._name_.modules"></a><a class="term" href="index.html#opt-nixosConfigurations._name_.modules"><code class="option">nixosConfigurations.&lt;name&gt;.modules</code></a></span></dt><dd><p>The list of nixos modules that represent this nixos configuration.
+By default, if there exist a nixos configuration file, it will be added to this list.</p><p><span class="emphasis"><em>Type:</em></span> list of raw value</p><p><span class="emphasis"><em>Default:</em></span> <code class="literal">
+        [
+        
+        ]
+    </code></p><p><span class="emphasis"><em>Declared by:</em></span></p><table border="0" summary="Simple list" class="simplelist"><tr><td><code class="filename"><a class="filename" href="https://github.com/msteen/nixcfg.lib/blob/master/lib/mkNixcfg/modules#blob-path" target="_top">
+                    &lt;nixcfg/lib/mkNixcfg/modules&gt;
+                </a></code></td></tr></table></dd><dt><span class="term"><a id="opt-nixosConfigurations._name_.stateVersion"></a><a class="term" href="index.html#opt-nixosConfigurations._name_.stateVersion"><code class="option">nixosConfigurations.&lt;name&gt;.stateVersion</code></a></span></dt><dd><p>The state version of this nixos configuration.
+By default the latest stable nixos version is used.</p><p><span class="emphasis"><em>Type:</em></span> string</p><p><span class="emphasis"><em>Default:</em></span> <code class="literal">"22.11"</code></p><p><span class="emphasis"><em>Declared by:</em></span></p><table border="0" summary="Simple list" class="simplelist"><tr><td><code class="filename"><a class="filename" href="https://github.com/msteen/nixcfg.lib/blob/master/lib/mkNixcfg/modules#blob-path" target="_top">
+                    &lt;nixcfg/lib/mkNixcfg/modules&gt;
+                </a></code></td></tr></table></dd><dt><span class="term"><a id="opt-nixosConfigurations._name_.system"></a><a class="term" href="index.html#opt-nixosConfigurations._name_.system"><code class="option">nixosConfigurations.&lt;name&gt;.system</code></a></span></dt><dd><p>The system of this nixos configuration.</p><p><span class="emphasis"><em>Type:</em></span> string</p><p><span class="emphasis"><em>Default:</em></span> <code class="literal">"x86_64-linux"</code></p><p><span class="emphasis"><em>Declared by:</em></span></p><table border="0" summary="Simple list" class="simplelist"><tr><td><code class="filename"><a class="filename" href="https://github.com/msteen/nixcfg.lib/blob/master/lib/mkNixcfg/modules#blob-path" target="_top">
+                    &lt;nixcfg/lib/mkNixcfg/modules&gt;
+                </a></code></td></tr></table></dd><dt><span class="term"><a id="opt-nixosModules"></a><a class="term" href="index.html#opt-nixosModules"><code class="option">nixosModules</code></a></span></dt><dd><p>The set of nixos modules made available in nixos configurations.</p><p><span class="emphasis"><em>Type:</em></span> attribute set of path</p><p><span class="emphasis"><em>Default:</em></span> <code class="literal">
+        {
+        
+        }
+    </code></p><p><span class="emphasis"><em>Declared by:</em></span></p><table border="0" summary="Simple list" class="simplelist"><tr><td><code class="filename"><a class="filename" href="https://github.com/msteen/nixcfg.lib/blob/master/lib/mkNixcfg/modules#blob-path" target="_top">
+                    &lt;nixcfg/lib/mkNixcfg/modules&gt;
+                </a></code></td></tr></table></dd><dt><span class="term"><a id="opt-nixosProfiles"></a><a class="term" href="index.html#opt-nixosProfiles"><code class="option">nixosProfiles</code></a></span></dt><dd><p>The set of nixos profiles made available in nixos configurations.</p><p><span class="emphasis"><em>Type:</em></span> attribute set of path</p><p><span class="emphasis"><em>Default:</em></span> <code class="literal">
+        {
+        
+        }
+    </code></p><p><span class="emphasis"><em>Declared by:</em></span></p><table border="0" summary="Simple list" class="simplelist"><tr><td><code class="filename"><a class="filename" href="https://github.com/msteen/nixcfg.lib/blob/master/lib/mkNixcfg/modules#blob-path" target="_top">
+                    &lt;nixcfg/lib/mkNixcfg/modules&gt;
+                </a></code></td></tr></table></dd><dt><span class="term"><a id="opt-overlays"></a><a class="term" href="index.html#opt-overlays"><code class="option">overlays</code></a></span></dt><dd><p>The nixpkgs overlays that can be used to extend a nixpkgs channel.
+Only the default overlay, so named or defined in 'pkgs/overlays.nix',
+is added by default to the list of nixpkgs overlays.</p><p><span class="emphasis"><em>Type:</em></span> lazy attribute set of (overlay)</p><p><span class="emphasis"><em>Default:</em></span> <code class="literal">
+        {
+        
+        }
+    </code></p><p><span class="emphasis"><em>Declared by:</em></span></p><table border="0" summary="Simple list" class="simplelist"><tr><td><code class="filename"><a class="filename" href="https://github.com/msteen/nixcfg.lib/blob/master/lib/mkNixcfg/modules#blob-path" target="_top">
+                    &lt;nixcfg/lib/mkNixcfg/modules&gt;
+                </a></code></td></tr></table></dd><dt><span class="term"><a id="opt-path"></a><a class="term" href="index.html#opt-path"><code class="option">path</code></a></span></dt><dd><p>The path where this nixcfg is located and from where arguments will be listed.</p><p><span class="emphasis"><em>Type:</em></span> path</p><p><span class="emphasis"><em>Declared by:</em></span></p><table border="0" summary="Simple list" class="simplelist"><tr><td><code class="filename"><a class="filename" href="https://github.com/msteen/nixcfg.lib/blob/master/lib/mkNixcfg/modules#blob-path" target="_top">
+                    &lt;nixcfg/lib/mkNixcfg/modules&gt;
+                </a></code></td></tr></table></dd><dt><span class="term"><a id="opt-systems"></a><a class="term" href="index.html#opt-systems"><code class="option">systems</code></a></span></dt><dd><p>The list of systems that are supported.
+Any referenced system, e.g. in a nixos configuration, must be an element of this list.</p><p><span class="emphasis"><em>Type:</em></span> list of (one of "aarch64-darwin", "aarch64-genode", "aarch64-linux", "aarch64-netbsd", "aarch64-none", "aarch64_be-none", "arm-none", "armv5tel-linux", "armv6l-linux", "armv6l-netbsd", "armv6l-none", "armv7a-darwin", "armv7a-linux", "armv7a-netbsd", "armv7l-linux", "armv7l-netbsd", "avr-none", "i686-cygwin", "i686-darwin", "i686-freebsd13", "i686-genode", "i686-linux", "i686-netbsd", "i686-none", "i686-openbsd", "i686-windows", "javascript-ghcjs", "m68k-linux", "m68k-netbsd", "m68k-none", "microblaze-linux", "microblaze-none", "microblazeel-linux", "microblazeel-none", "mips64el-linux", "mipsel-linux", "mipsel-netbsd", "mmix-mmixware", "msp430-none", "or1k-none", "powerpc-netbsd", "powerpc-none", "powerpc64-linux", "powerpc64le-linux", "powerpcle-none", "riscv32-linux", "riscv32-netbsd", "riscv32-none", "riscv64-linux", "riscv64-netbsd", "riscv64-none", "rx-none", "s390-linux", "s390-none", "s390x-linux", "s390x-none", "vc4-none", "wasm32-wasi", "wasm64-wasi", "x86_64-cygwin", "x86_64-darwin", "x86_64-freebsd13", "x86_64-genode", "x86_64-linux", "x86_64-netbsd", "x86_64-none", "x86_64-openbsd", "x86_64-redox", "x86_64-solaris", "x86_64-windows")</p><p><span class="emphasis"><em>Default:</em></span> <code class="literal">
+        [
+        "x86_64-linux" "aarch64-linux" 
+        ]
+    </code></p><p><span class="emphasis"><em>Declared by:</em></span></p><table border="0" summary="Simple list" class="simplelist"><tr><td><code class="filename"><a class="filename" href="https://github.com/msteen/nixcfg.lib/blob/master/lib/mkNixcfg/modules#blob-path" target="_top">
+                    &lt;nixcfg/lib/mkNixcfg/modules&gt;
+                </a></code></td></tr></table></dd></dl></div></div></div><div class="navfooter"><hr /></div></body></html>
