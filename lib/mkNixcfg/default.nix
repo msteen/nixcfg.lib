@@ -120,16 +120,13 @@ in
         # We cannot inherit name, as it will conflict with the workings of submodules.
         # It would for example lead to misconfiguring home manager.
         inherit inputs';
+        lib = outputLib;
         nixcfg = {
           inherit (config) name;
           lib = nixcfgsLib;
         };
         data = lib.mapAttrs (_: lib.getAttrPath [ "config" "data" ]) nixcfgsAttrs;
         profiles = lib.mapAttrs (_: lib.getAttr "${type}Profiles") nixcfgsAttrs;
-      }
-      # This would otherwise overwrite the extensions made to lib by Home Manager.
-      // lib.optionalAttrs (type != "home") {
-        lib = outputLib;
       }
       // moduleArgs;
 
@@ -240,13 +237,18 @@ in
             ...
           } @ args:
             lib.mapAttrsToList (username: user:
-              lib.nameValuePair "${name}_${username}" (inputs.home-manager.lib.homeManagerConfiguration {
+              lib.nameValuePair "${name}_${username}" (inputs.home-manager.lib.homeManagerConfiguration (let
+                specialArgs = mkSpecialArgs "home" args;
+              in {
                 inherit pkgs;
-                lib = outputLib;
-                extraSpecialArgs = mkSpecialArgs "home" args;
                 modules = mkHomeModules args username user;
                 check = true;
-              }))
+
+                # Workaround for Home Manager to prevent its extended lib from being overwritten.
+                # Related PR: https://github.com/nix-community/home-manager/pull/3969
+                extraSpecialArgs = removeAttrs specialArgs [ "lib" ];
+                inherit (specialArgs) lib;
+              })))
             users);
     };
 
