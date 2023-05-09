@@ -65,7 +65,11 @@ in
 
     nixpkgsLib = libNixpkgs.lib.extend (final: prev: { input = libNixpkgs; } // builtins);
     nixcfgsLib = lib.extendsList (lib.concatLists (lib.catAttrs "libOverlays" nixcfgs)) (final: nixcfg.lib);
-    outputLib = nixpkgsLib.extend (final: prev: nixcfgsLib);
+    outputLib = nixpkgsLib.extend (final: prev:
+      nixcfgsLib
+      //
+      # Make sure we never overwrite anything of builtins or standard lib.
+      lib.intersectAttrs nixcfgsLib nixpkgsLib);
 
     mkChannels' = mkChannels {
       nixcfgsOverlays = lib.mapAttrs (_: lib.getAttr "overlays") nixcfgsAttrs;
