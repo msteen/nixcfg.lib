@@ -4,6 +4,8 @@
 }: { config, ... }: let
   inherit (lib) types;
 
+  # Unfortunately there is no way to derive this list from within this module,
+  # so they are explicitly stated.
   configurationTypes = [ "nixos" "container" "home" ];
 
   listedArgs = lib.listAttrs config.path ({
@@ -19,10 +21,14 @@
       profiles = "${type}Profiles";
     }));
 in {
+  # This module will never be passed straight as a file
+  # due to being a function that produces a module,
+  # so explicitly state the defining file for the module system to use.
   _file = ./.;
 
   options = let
-    # https://github.com/NixOS/nixpkgs/blob/1a411f23ba299db155a5b45d5e145b85a7aafc42/nixos/modules/misc/nixpkgs.nix#L45-L50
+    # There is no overlay type in the nixpkgs lib, so we have to define one ourselves.
+    # Based on: https://github.com/NixOS/nixpkgs/blob/1a411f23ba299db155a5b45d5e145b85a7aafc42/nixos/modules/misc/nixpkgs.nix#L45-L50
     overlay = lib.mkOptionType {
       name = "overlay";
       description = "overlay";
@@ -33,6 +39,7 @@ in {
     # The raw type won't try to merge.
     flake = types.raw;
 
+    # Helper to make it easier to define simple submodules.
     mkSubmoduleOptions = options: types.submodule { inherit options; };
 
     configurationOptions = type: {
@@ -86,10 +93,25 @@ in {
       };
     };
 
-    checkConfigurationSystem = type: name: configuration:
-      if !(lib.elem configuration.system config.systems)
-      then throw "The ${type} configuration '${name}' has system '${configuration.system}', which is not listed in the supported systems."
-      else configuration;
+    mkSimpleConfigurationsOption = type: args: let
+      default = {
+        type = types.lazyAttrsOf (mkSubmoduleOptions (configurationOptions type // modulesOptions type));
+        default = { };
+        apply = lib.mapAttrs (name: configuration:
+          if configuration.modules == [ ]
+          then throw "The ${type} configuration '${name}' is missing as configured modules or in '${type}/configs/'."
+          else if !(lib.elem configuration.system config.systems)
+          then throw "The ${type} configuration '${name}' has system '${configuration.system}', which is not listed in the supported systems."
+          else configuration);
+      };
+    in
+      lib.mkOption (
+        default
+        // args
+        // lib.optionalAttrs (args ? apply) {
+          apply = configurations: args.apply (default.apply configurations);
+        }
+      );
   in
     {
       name = lib.mkOption {
@@ -122,11 +144,14 @@ in {
         type = types.lazyAttrsOf overlay;
         default = { };
         apply = overlays:
+        # We only disallow passing a default overlay directly when it already exist on the file system.
           if overlays ? default && listedArgs ? overlay
           then throw "The overlay name 'default' is already reserved for the overlay defined in 'pkgs/overlay.nix'."
           else
             overlays
             // lib.optionalAttrs (listedArgs ? overlay) {
+              # We need to import because overlays are not allowed to be passed as paths.
+              # A nixpkgs overlay should always be a function in the form `final: prev: { ... }`.
               default = import listedArgs.overlay;
             };
         description = ''
@@ -202,20 +227,15 @@ in {
       };
 
       data = lib.mkOption {
-        type = types.lazyAttrsOf types.raw;
+        # We want it to merge values where possible, which requires the unspecified type.
+        type = types.lazyAttrsOf types.unspecified;
         default = { };
         description = ''
           Arbitrary Nix expressions that can be shared between configurations.
         '';
       };
 
-      nixosConfigurations = lib.mkOption {
-        type = types.lazyAttrsOf (mkSubmoduleOptions (configurationOptions "nixos" // modulesOptions "nixos"));
-        default = { };
-        apply = lib.mapAttrs (name: configuration:
-          if configuration.modules == [ ]
-          then throw "The nixos configuration '${name}' is missing as configured modules or in 'nixos/configs/'."
-          else checkConfigurationSystem "nixos" name configuration);
+      nixosConfigurations = mkSimpleConfigurationsOption "nixos" {
         description = ''
           The set of nixos configurations.
           If a nixos configuration shares a name with a container configuration,
@@ -223,16 +243,9 @@ in {
         '';
       };
 
-      containerConfigurations = lib.mkOption {
-        type = types.lazyAttrsOf (mkSubmoduleOptions (configurationOptions "container" // modulesOptions "container"));
-        default = { };
-        apply = configurations: let
+      containerConfigurations = mkSimpleConfigurationsOption "container" {
+        apply = containerConfigurations: let
           inherit (config) nixosConfigurations;
-          containerConfigurations = lib.mapAttrs (name: configuration:
-            if configuration.modules == [ ]
-            then throw "The container configuration '${name}' is missing as configured modules or in 'container/configs/'."
-            else checkConfigurationSystem "container" name configuration)
-          configurations;
         in
           if lib.length (lib.attrNames (lib.intersectAttrs containerConfigurations nixosConfigurations)) != lib.length (lib.attrNames containerConfigurations)
           then throw "For each container configuration there should be a corresponding nixos configuration."
@@ -255,10 +268,16 @@ in {
                     homeDirectory = lib.mkOption {
                       type = types.path;
                       default = "/home/${name}";
+                      description = ''
+                        The home directory of this user.
+                      '';
                     };
                   };
               }));
               default = { };
+              description = ''
+                The set of users available in this home configuration.
+              '';
             };
           }
         ));
@@ -292,6 +311,7 @@ in {
 
       sopsConfig = lib.mkOption {
         internal = true;
+        readOnly = true;
         type = types.nullOr types.path;
         description = ''
           The path to the SOPS config file, if available.
@@ -300,6 +320,7 @@ in {
 
       requireSops = lib.mkOption {
         internal = true;
+        readOnly = true;
         type = types.bool;
         default = config.sopsConfig != null;
         description = ''
@@ -380,12 +401,21 @@ in {
       listed));
   in
     {
+      # Overlays are not allowed to be paths, but expected to be a function.
+      # See the overlays option for more details.
       lib.overlays = map import (lib.optionalAttr "libOverlay" listedArgs);
       overlays = lib.mapAttrs (_: import) listedArgs.overlays;
+
+      # For data, we are only interested in the values, not the paths that declare them.
       data = lib.mapAttrs (_: import) listedArgs.data;
+
       sopsConfig = listedArgs.sopsConfig or null;
+
       nixosConfigurations = defaultFromListed "nixos" (toListed listedArgs.nixosConfigurations);
       containerConfigurations = defaultFromListed "container" (toListed listedArgs.containerConfigurations);
+
+      # Home configurations have a different directory structure,
+      # so we handle the listed files differently too.
       homeConfigurations = homeFromListed (toListed listedArgs.homeConfigurations);
     }
     // lib.getAttrs (lib.concatMap (type: [ "${type}Modules" "${type}Profiles" ]) configurationTypes) listedArgs;

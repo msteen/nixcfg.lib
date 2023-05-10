@@ -5,5 +5,8 @@
   nixcfgsAttrs = lib.mapToAttrs (nixcfg: lib.nameValuePair nixcfg.config.name nixcfg) nixcfgs;
 in {
   inherit nixcfgsAttrs;
+
+  # It can be very inefficient in Nix to check equality for complex values,
+  # so we compare names instead and look the values back up in the attrset.
   nixcfgs = lib.attrVals (lib.unique (lib.mapGetAttrPath [ "config" "name" ] nixcfgs)) nixcfgsAttrs;
 }

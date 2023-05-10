@@ -18,7 +18,6 @@
         ++ [ (final: prev: { inherit input; }) ];
     };
 
-  # Skip impure.nix: ${input} -> ${input}/pkgs/top-level/impure.nix -> ${input}/pkgs/top-level
   importNixpkgs = {
     input,
     system,
@@ -26,6 +25,7 @@
     overlays ? [ ],
     ...
   }:
+  # Skip impure.nix: ${input} -> ${input}/pkgs/top-level/impure.nix -> ${input}/pkgs/top-level
     import (input + "/pkgs/top-level") {
       localSystem = { inherit system; };
       inherit config overlays;

@@ -21,6 +21,8 @@
   mkNixcfgs = import ./mkNixcfgs.nix { inherit lib; };
   mkChannels = import ./mkChannels.nix { inherit lib; };
 
+  # The list is turned into an attrset for efficiently getting all the listed attributes,
+  # by leveraging the `intersectAttrs` builtin.
   flakeSystemAttrs = lib.genAttrs [
     "checks"
     "packages"
@@ -30,6 +32,7 @@
     "devShells"
   ] (_: null);
 
+  # This filters out the inputs for nixpkgs and all official nixpkgs channel branches.
   filterNixpkgsInputs = lib.filterAttrs (
     name: _input:
       lib.elem name [ "nixpkgs" "nixpkgs-unstable" ]
@@ -37,7 +40,16 @@
       || lib.hasPrefix "release-" name
   );
 
+  # This will make sure there always is a nixpkgs channel to fallback on.
+  # The order of fallback preference is as follows:
+  # - inputs.nixos-00_00
+  # - inputs.nixos-unstable
+  # - inputs.nixpkgs-00_00
+  # - inputs.nixpkgs-unstable
+  # - nixcfg.inputs.nixpkgs
   inputsWithDefaultNixpkgs = inputs: let
+    # The builtin `compareVersions` orders digits before letters,
+    # so no special case to handle unstable is needed.
     latestInputs =
       lib.mapAttrs (_name: names: inputs.${lib.maximum lib.compareVersions names})
       (lib.groupBy (name: lib.head (lib.splitVersion name)) (lib.attrNames inputs));
@@ -56,22 +68,31 @@ in
     nixcfgsNixpkgsInputs = inputsWithDefaultNixpkgs (filterNixpkgsInputs nixcfgsInputs);
 
     libNixpkgs = let
-      channelName = config.lib.channelName or "nixpkgs";
+      inherit (config.lib) channelName;
     in
       nixcfgsNixpkgsInputs.${channelName}
       or (throw "The lib nixpkgs channel '${channelName}' does not exist.");
 
+    # The nixpkgs lib has to be passed as an overlay too for it to be available for use
+    # in the configured lib overlays (via `prev.lib`).
     libOverlays = lib.singleton (final: prev: { lib = nixpkgsLib; }) ++ config.lib.overlays;
 
+    # The nixpkgs lib is extended with all builtins, because some of them are missing.
+    # Even some of the older builtins.
+    # For debugging purposes and in case it can be useful
+    # the nixpkgs input used for the lib is also made available.
+    # The reason we do not expose it as `path` is that it would conflict with `builtins.path`.
     nixpkgsLib = libNixpkgs.lib.extend (final: prev: { input = libNixpkgs; } // builtins);
     nixcfgsLib = lib.extendsList (lib.concatLists (lib.catAttrs "libOverlays" nixcfgs)) (final: nixcfg.lib);
     outputLib = nixpkgsLib.extend (final: prev:
       nixcfgsLib
       //
-      # Make sure we never overwrite anything of builtins or standard lib.
+      # Make sure we never overwrite anything of the builtins or the nixpkgs lib.
       lib.intersectAttrs nixcfgsLib nixpkgsLib);
 
     mkChannels' = mkChannels {
+      # The channel overlays option allows you to pass a function
+      # expecting the attrset containing all available overlays.
       nixcfgsOverlays = lib.mapAttrs (_: lib.getAttr "overlays") nixcfgsAttrs;
       inherit (config) channels;
     };
@@ -87,22 +108,29 @@ in
           } @ configuration: let
             inputs = inputsWithDefaultNixpkgs (
               nixcfgsInputs
-              // config.inputs
               // configuration.inputs
             );
+
+            # Preselect the system for all attributes known to be grouped by system.
+            # Similar to what flake.parts does: https://flake.parts/module-arguments.html#inputs
             inputs' = lib.mapAttrs (_: flake:
               flake
               // lib.attrsGetAttr system (lib.intersectAttrs flakeSystemAttrs flake))
             inputs;
+
+            # The configuration inputs could contain additional channels.
+            # To maximize sharing, the new channels are merged with the nixcfgs channels.
             channels =
               (mkChannels' (filterNixpkgsInputs inputs) [ system ]).${system}
               // nixcfgsChannels.${system};
+
             pkgs =
               channels.${channelName}
               or (throw "The ${type} nixpkgs channel '${channelName}' does not exist.");
+
             unavailableInputs =
               lib.filter (requiredInput: !inputs ? ${requiredInput})
-              ((requiredInputs.${type} or [ ]) ++ lib.optional config.requireSops "sops-nix");
+              (requiredInputs.${type} ++ lib.optional config.requireSops "sops-nix");
           in
             if unavailableInputs != [ ]
             then throw "The ${type} configuration '${name}' did not specify '${lib.head unavailableInputs}' as part of their inputs."
@@ -124,11 +152,15 @@ in
         # We cannot inherit name, as it will conflict with the workings of submodules.
         # It would for example lead to misconfiguring home manager.
         inherit inputs';
+
+        # By default the lib containing `evalModules` is used,
+        # but we do not always have control over which lib is used for this,
+        # so we pass it explicitly as a special argument, which overwrites the default.
         lib = outputLib;
-        nixcfg = {
-          inherit (config) name;
-          lib = nixcfgsLib;
-        };
+
+        # In case only nixcfg's extensions to lib are needed.
+        nixcfg.lib = nixcfgsLib;
+
         data = lib.mapAttrs (_: lib.getAttrPath [ "config" "data" ]) nixcfgsAttrs;
         profiles = lib.mapAttrs (_: lib.getAttr "${type}Profiles") nixcfgsAttrs;
       }
@@ -152,6 +184,8 @@ in
       inherit config defaultOverlays lib mkDefaultModules;
     };
 
+    # One set of configuration arguments could lead to multiple actual such configurations.
+    # This is the case for home configurations due to them being build per user.
     mkConfigurations = configurationsArgs: f:
       lib.listToAttrs (lib.concatMapAttrsToList (name: configurationArgs: let
         value = f configurationArgs;
@@ -163,7 +197,11 @@ in
 
     configurations = {
       nixos =
+        # Only non-overlapping nixos containers are build standalone.
+        # See the nixosContainers option description for more details.
         mkConfigurations (removeAttrs configurationsArgs.nixos (lib.attrNames configurationsArgs.container))
+        # This is the core of what `nixpkgs.lib.nixosSystem` does.
+        # The rest is handled in `mkNixosModules`.
         (args: (import (args.pkgs.input + "/nixos/lib/eval-config.nix") {
           inherit (args) system;
           lib = outputLib;
@@ -185,7 +223,11 @@ in
           in
             inputs.extra-container.lib.buildContainers {
               inherit system;
+
+              # Used to build the containers.
               nixpkgs = inputs.${channelName};
+
+              # Counterintuitively the config attribute here is a module.
               config.imports =
                 lib.optional (lib.compareVersions lib.trivial.release "23.05" < 0) (let
                   nixpkgs =
@@ -198,6 +240,9 @@ in
                   imports = [ (nixpkgs.outPath + "/nixos/modules/virtualisation/nixos-containers.nix") ];
                 })
                 ++ lib.singleton {
+                  # Our container configurations live within this submodule.
+                  # To make it possible to pass our custom special arguments to the submodule,
+                  # we have to extend the option, which can be done by overwriting it, causing a merge.
                   options.containers = lib.mkOption {
                     type = attrsOf (submoduleWith {
                       shorthandOnlyDefinesConfig = true;
@@ -213,6 +258,8 @@ in
                     specialArgs = mkSpecialArgs "nixos" args;
                     config.imports =
                       mkNixosModules args
+                      # By default these paths do not exist within the container,
+                      # but home manager expects them to exist, so we recreate them.
                       ++ lib.optional (configurationsArgs.home ? ${name}) {
                         systemd.services.fix-home-manager = {
                           serviceConfig = {
@@ -256,7 +303,7 @@ in
             users);
     };
 
-    packages = let
+    configurationPackages = let
       list = lib.concatMap (type:
         lib.mapAttrsToList (
           name: configuration: let
@@ -280,7 +327,7 @@ in
 
     flakeOutputs =
       {
-        inherit packages;
+        packages = configurationPackages;
         inherit (config) overlays;
         formatter =
           lib.genAttrs config.systems (system:
@@ -292,8 +339,12 @@ in
 
     customOutputs =
       {
+        # These are all needed to combine with further nixcfgs.
         inherit config libOverlays nixcfgs;
+
+        # To make nixcfg's extensions to lib also available outside configurations.
         lib = outputLib;
+
         # This is normally generated by flakes, but is useful to expose outside of flakes too.
         outPath = config.path;
       }

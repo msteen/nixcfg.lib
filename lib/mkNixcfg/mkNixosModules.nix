@@ -21,13 +21,17 @@ mkDefaultModules "nixos" name
 ++ lib.optional config.requireSops inputs.sops-nix.nixosModules.sops
 ++ lib.optionals (homeConfigurationsArgs ? ${name}) (let
   homeConfigurationArgs = homeConfigurationsArgs.${name};
+  specialArgs = mkSpecialArgs "home" homeConfigurationArgs;
 in [
   homeConfigurationArgs.inputs.home-manager.nixosModules.home-manager
   {
     home-manager = {
       useGlobalPkgs = true;
       useUserPackages = true;
-      extraSpecialArgs = mkSpecialArgs "home" homeConfigurationArgs;
+
+      # See the standalone home configuration `extraSpecialArgs` as to why we need remove lib.
+      extraSpecialArgs = removeAttrs specialArgs [ "lib" ];
+
       users =
         lib.mapAttrs (username: user: {
           imports = mkHomeModules homeConfigurationArgs username user;
@@ -74,6 +78,8 @@ in
 
     environment.systemPackages = [ self.formatter.${system} ];
 
+    # The attributes `rev` and `shortRev` are only available when the input is marked to be a git input.
+    # Even something with type path contains a git repo, it will be ignored.
     system.nixos.revision = lib.mkDefault config.system.configurationRevision;
     system.nixos.versionSuffix = lib.mkDefault ".${lib.substring 0 8 (self.lastModifiedDate or "19700101")}.${self.shortRev or "dirty"}";
     system.stateVersion = stateVersion;
