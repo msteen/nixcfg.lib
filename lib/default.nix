@@ -149,4 +149,10 @@
     boot.loader.grub.enable = false;
     fileSystems."/".device = "/dev/null";
   };
+
+  fetchPullRequest = id: sha256:
+    lib.fetchurl {
+      url = "https://github.com/NixOS/nixpkgs/pull/${toString id}.diff";
+      inherit sha256;
+    };
 }
