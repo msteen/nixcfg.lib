@@ -29,7 +29,7 @@
     packages = lib.genAttrs [ "x86_64-linux" ] (system: let
       pkgs = nixpkgs.legacyPackages.${system};
     in {
-      docs = import ./lib/mkNixcfg/docs { inherit lib nixcfg pkgs; };
+      htmlDocs = import ./lib/mkNixcfg/docs { inherit lib nixcfg pkgs; };
     });
 
     tests = let
