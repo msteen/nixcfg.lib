@@ -131,12 +131,14 @@ in {
           freeformType = types.lazyAttrsOf flake;
           options.self = lib.mkOption {
             type = flake;
+            description = ''
+              The self input, i.e. the self-reference, is expected to be available.
+              It's metadata is used for setting various defaults.
+            '';
           };
         };
         description = ''
           The flake inputs of this nixcfg.
-          The self input, i.e. the self-reference, is expected to be available.
-          It's metadata is used for setting various defaults.
         '';
       };
 
