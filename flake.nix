@@ -31,5 +31,12 @@
     in {
       doc = (import ./lib/mkNixcfg/docs { inherit lib nixcfg pkgs; }).html;
     });
+
+    tests = let
+      results = import ./test/lib { inherit lib nixcfg; };
+    in
+      if results == [ ]
+      then null
+      else results;
   };
 }
