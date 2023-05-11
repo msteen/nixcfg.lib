@@ -62,7 +62,7 @@ in
   rawConfig: let
     config = mkConfig rawConfig;
 
-    inherit (mkNixcfgs config.inputs) nixcfgs nixcfgsAttrs;
+    inherit (mkNixcfgs config) nixcfgs nixcfgsAttrs;
 
     nixcfgsInputs = lib.concatAttrs (lib.mapGetAttrPath [ "config" "inputs" ] nixcfgs);
     nixcfgsNixpkgsInputs = inputsWithDefaultNixpkgs (filterNixpkgsInputs nixcfgsInputs);

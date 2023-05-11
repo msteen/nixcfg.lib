@@ -7,6 +7,20 @@
   traceJSONMap = f: x: lib.trace (lib.toJSON (f x)) x;
   traceJSONValue = value: lib.traceJSONMap (lib.const value);
 
+  concatStringsEnglish = sep: list: let
+    listLength = lib.length list;
+    lastIndex = listLength - 1;
+  in
+    if listLength == 0
+    then ""
+    else if listLength == 1
+    then lib.head list
+    else if listLength == 2
+    then "${lib.head list} ${sep} ${lib.elemAt list 1}"
+    else lib.concatStringsSep ", " (lib.sublist 0 lastIndex list ++ [ "${sep} ${lib.elemAt list lastIndex}" ]);
+  concatStringsAnd = lib.concatStringsEnglish "and";
+  concatNames = list: lib.concatStringsAnd (map (name: "'${name}'") list);
+
   concatAttrs = lib.foldl' (a: b: a // b) { };
   concatAttrsRecursive = lib.foldl' (a: b: lib.recursiveUpdate a b) { };
 
@@ -28,6 +42,12 @@
   concatMapAttrsToList = f: attrs: lib.concatLists (lib.mapAttrsToList f attrs);
 
   mapToAttrs = f: list: lib.listToAttrs (map f list);
+
+  filterMapAttrs = f: g: attrs:
+    lib.listToAttrs (lib.concatMap (name: let
+      value = attrs.${name};
+    in
+      lib.optional (f name value) (g name value)) (lib.attrNames attrs));
 
   maximum = compare: list:
     lib.foldl' (a: b:

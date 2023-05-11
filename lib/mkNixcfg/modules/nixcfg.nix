@@ -120,12 +120,14 @@ in {
           The name used to refer to this nixcfg.
         '';
       };
+
       path = lib.mkOption {
         type = types.path;
         description = ''
           The path where this nixcfg is located and from where arguments will be listed.
         '';
       };
+
       inputs = lib.mkOption {
         type = types.submodule {
           freeformType = types.lazyAttrsOf flake;
@@ -139,6 +141,16 @@ in {
         };
         description = ''
           The flake inputs of this nixcfg.
+        '';
+      };
+
+      nixcfgs = lib.mkOption {
+        type = types.listOf types.str;
+        default = [ ];
+        description = ''
+          The list of nixcfgs to be merged with this one in the order listed.
+          The inputs cannot be used to determine this, because attrsets are unordered,
+          yet the order is significant in how things will be merged.
         '';
       };
 
@@ -291,7 +303,7 @@ in {
             [ "system" "channelName" "stateVersion" ];
         in
           if config.nixosConfigurations ? ${name} && invalidOptions != [ ]
-          then throw "The home configuration '${name}' has the options ${lib.toJSON invalidOptions} that do not equal those found in its NixOS configuration."
+          then throw "The home configuration '${name}' has the options ${lib.concatNames invalidOptions} that do not equal those found in its NixOS configuration."
           else
             homeConfiguration
             // {

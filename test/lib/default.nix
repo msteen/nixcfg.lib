@@ -14,7 +14,6 @@
     path = ./nixcfg-bar;
     inputs = {
       self = bar;
-      nixcfg-foo = foo;
     };
   };
   baz = lib.mkNixcfg {
@@ -22,9 +21,10 @@
     path = ./nixcfg-baz;
     inputs = {
       self = baz;
-      nixcfg-bar = bar;
       nixcfg-foo = foo;
+      nixcfg-bar = bar;
     };
+    nixcfgs = [ "foo" "bar" ];
   };
 
   inherit (let
