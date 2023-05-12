@@ -47,10 +47,10 @@ in {
         type = types.lazyAttrsOf flake;
         default = { };
         description = ''
-          The flake inputs of this ${type} configuration.
-          They extend those of the nixcfg.
+          The flake inputs of this ${type} configuration. They extend those of the nixcfg.
         '';
       };
+
       channelName = lib.mkOption {
         type = types.str;
         default = "nixpkgs";
@@ -58,6 +58,7 @@ in {
           The channel that should be used for this ${type} configuration.
         '';
       };
+
       system = lib.mkOption {
         type = types.str;
         default = "x86_64-linux";
@@ -65,6 +66,7 @@ in {
           The system of this ${type} configuration.
         '';
       };
+
       moduleArgs = lib.mkOption {
         type = types.lazyAttrsOf types.raw;
         default = { };
@@ -72,11 +74,13 @@ in {
           The list of arguments that should be passed to the module system evaluation for this ${type} configuration.
         '';
       };
+
       stateVersion = lib.mkOption {
         type = types.str;
         default = "22.11";
         description = ''
           The state version of this ${type} configuration.
+
           By default the latest stable nixos version is used.
         '';
       };
@@ -88,6 +92,7 @@ in {
         default = [ ];
         description = ''
           The list of ${type} modules that represent this ${type} configuration.
+
           By default, if there exist a ${type} configuration file, it will be added to this list.
         '';
       };
@@ -170,6 +175,7 @@ in {
             };
         description = ''
           The nixpkgs overlays that can be used to extend a nixpkgs channel.
+
           Only the default overlay, so named or defined in 'pkgs/overlays.nix',
           is added by default to the list of nixpkgs overlays.
         '';
@@ -198,6 +204,7 @@ in {
             default = { };
             description = ''
               The nixpkgs config that should be used for this channel.
+
               By default all channels allow unfree packages.
             '';
           };
