@@ -57,6 +57,8 @@
     null
     list;
 
+  sort' = list: lib.sort (a: b: a < b) list;
+
   optionalAttr = name: attrs:
     lib.optional (attrs ? ${name}) attrs.${name};
 

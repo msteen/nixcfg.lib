@@ -5,8 +5,6 @@
     # We use the latest stable release because it also acts as the fallback nixpkgs.
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-22.11";
 
-    flake-utils.url = "github:numtide/flake-utils";
-
     alejandra.url = "github:msteen/alejandra";
     alejandra.inputs.nixpkgs.follows = "nixpkgs";
   };

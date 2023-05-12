@@ -182,7 +182,7 @@ in {
       };
 
       systems = lib.mkOption {
-        type = types.listOf (types.enum nixcfg.inputs.flake-utils.lib.allSystems);
+        type = types.listOf (types.enum (lib.sort' lib.platforms.all));
         default = [ "x86_64-linux" "aarch64-linux" ];
         description = ''
           The list of systems that are supported.
