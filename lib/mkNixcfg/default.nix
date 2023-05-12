@@ -13,7 +13,23 @@
 
   configurationToPackage = {
     nixos = configuration: configuration.config.system.build.toplevel;
-    container = configuration: removeAttrs configuration [ "config" "containers" ];
+    container = configuration: let
+      inherit (configuration.config.nixpkgs) pkgs;
+    in
+      configuration.config.system.build.etc.overrideAttrs (old: {
+        name = "container";
+        buildCommand =
+          old.buildCommand
+          + "\n"
+          + ''
+            mkdir -p $out/bin
+            cat <<EOF > $out/bin/container
+              #!${pkgs.runtimeShell}
+              EXTRA_CONTAINER_ETC=$out exec extra-container "\$@"
+            EOF
+            chmod +x $out/bin/container
+          '';
+      });
     hello = configuration: configuration.activationPackage;
   };
 
@@ -214,35 +230,46 @@ in
         ({
             name,
             inputs,
-            system,
             channelName,
+            system,
+            stateVersion,
             modules,
+            pkgs,
             ...
           } @ args: let
             inherit (lib.types) attrsOf submoduleWith;
+            needNewerNixpkgs = lib.compareVersions lib.trivial.release "23.05" < 0;
+            newerNixpkgs =
+              inputs.nixos-23_05
+              or inputs.nixos-unstable
+              or (throw ("To have similar module arguments within containers as in nixos we need special argument support."
+                  + " This support has only be added in nixpkgs 23.05, so the nixpkgs channel 'nixos-23_05' or 'nixos-unstable' is required."));
           in
-            inputs.extra-container.lib.buildContainers {
+            # Trigger the potential error already when evaluating the config. Do not postpone it until building.
+            lib.seq (
+              if needNewerNixpkgs
+              then newerNixpkgs
+              else null
+            ) (import (inputs.extra-container + "/eval-config.nix") {
               inherit system;
 
+              # Whether to use state version 21.11 (false) or 20.05 (true).
+              # It is a required attribute, but meaningless, because it will be overwritten.
+              legacyInstallDirs = false;
+
               # Used to build the containers.
-              nixpkgs = inputs.${channelName};
+              nixosPath = inputs.${channelName} + "/nixos";
 
               # Counterintuitively the config attribute here is a module.
-              config.imports =
-                lib.optional (lib.compareVersions lib.trivial.release "23.05" < 0) (let
-                  nixpkgs =
-                    inputs.nixos-23_05
-                    or inputs.nixos-unstable
-                    or (throw ("To have similar module arguments within containers as in nixos we need special argument support."
-                        + " This support has only be added in nixpkgs 23.05, so the nixpkgs channel 'nixos-23_05' or 'nixos-unstable' is required."));
-                in {
+              systemConfig.imports =
+                lib.optional needNewerNixpkgs {
                   disabledModules = [ "virtualisation/nixos-containers.nix" ];
-                  imports = [ (nixpkgs.outPath + "/nixos/modules/virtualisation/nixos-containers.nix") ];
-                })
+                  imports = [ (newerNixpkgs.outPath + "/nixos/modules/virtualisation/nixos-containers.nix") ];
+                }
                 ++ lib.singleton {
-                  # Our container configurations live within this submodule.
-                  # To make it possible to pass our custom special arguments to the submodule,
-                  # we have to extend the option, which can be done by overwriting it, causing a merge.
+                  # The container configurations live within this submodule.
+                  # To make it possible to pass the custom special arguments to the submodule,
+                  # the option has to be extended, which can be done by overwriting it, causing a merge.
                   options.containers = lib.mkOption {
                     type = attrsOf (submoduleWith {
                       shorthandOnlyDefinesConfig = true;
@@ -252,30 +279,42 @@ in
                       specialArgs = mkSpecialArgs "container" args;
                     });
                   };
-                  config.containers.${name} = let
-                    args = configurationsArgs.nixos.${name};
-                  in {
-                    specialArgs = mkSpecialArgs "nixos" args;
-                    config.imports =
-                      mkNixosModules args
-                      # By default these paths do not exist within the container,
-                      # but home manager expects them to exist, so we recreate them.
-                      ++ lib.optional (configurationsArgs.home ? ${name}) {
-                        systemd.services.fix-home-manager = {
-                          serviceConfig = {
-                            Type = "oneshot";
+
+                  config = {
+                    # Set the state version relevant for building the containers.
+                    # This overwrites the default based on `legacyInstallDirs`.
+                    system = { inherit stateVersion; };
+
+                    nixpkgs = { inherit pkgs; };
+
+                    # Multiple containers can be defined at once, but the commands of the CLI work on all containers defined.
+                    # For example, there is no creating a specific container, it will create all of them at once.
+                    # The workaround is to only define one container at a time.
+                    containers.${name} = let
+                      args = configurationsArgs.nixos.${name};
+                    in {
+                      specialArgs = mkSpecialArgs "nixos" args;
+                      config.imports =
+                        mkNixosModules args
+                        # By default these paths do not exist within the container,
+                        # but home manager expects them to exist, so we recreate them.
+                        ++ lib.optional (configurationsArgs.home ? ${name}) {
+                          systemd.services.fix-home-manager = {
+                            serviceConfig = {
+                              Type = "oneshot";
+                            };
+                            script = lib.concatStrings (lib.mapAttrsToList (name: _: ''
+                                mkdir -p /nix/var/nix/{profiles,gcroots}/per-user/${name}
+                                chown ${name}:root /nix/var/nix/{profiles,gcroots}/per-user/${name}
+                              '')
+                              configurationsArgs.home.${name}.users);
+                            wantedBy = [ "multi-user.target" ];
                           };
-                          script = lib.concatStrings (lib.mapAttrsToList (name: _: ''
-                              mkdir -p /nix/var/nix/{profiles,gcroots}/per-user/${name}
-                              chown ${name}:root /nix/var/nix/{profiles,gcroots}/per-user/${name}
-                            '')
-                            configurationsArgs.home.${name}.users);
-                          wantedBy = [ "multi-user.target" ];
                         };
-                      };
+                    };
                   };
                 };
-            });
+            }));
 
       home =
         mkConfigurations configurationsArgs.home
