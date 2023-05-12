@@ -237,7 +237,7 @@ in
             pkgs,
             ...
           } @ args: let
-            inherit (lib.types) attrsOf submoduleWith;
+            inherit (lib) types;
             needNewerNixpkgs = lib.compareVersions lib.trivial.release "23.05" < 0;
             newerNixpkgs =
               inputs.nixos-23_05
@@ -271,7 +271,7 @@ in
                   # To make it possible to pass the custom special arguments to the submodule,
                   # the option has to be extended, which can be done by overwriting it, causing a merge.
                   options.containers = lib.mkOption {
-                    type = attrsOf (submoduleWith {
+                    type = types.attrsOf (types.submoduleWith {
                       shorthandOnlyDefinesConfig = true;
                       modules =
                         mkDefaultModules "container" name
