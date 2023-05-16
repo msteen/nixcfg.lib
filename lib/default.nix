@@ -201,10 +201,20 @@
       }
       // removeAttrs config [ "inputs" ]
       // {
-        nixcfgs =
+        nixcfgs = let
+          recur = flake:
+            (lib.concatMap (x: let
+              name = "nixcfg-${x}";
+            in
+              if lib.isString x && flake.inputs.${name}
+              then recur flake.inputs.${name}
+              else [ x ])
+            flake.nixcfg.config.nixcfgs)
+            ++ [ flake.nixcfg ];
+        in
           (lib.deduplicateNixcfgs (lib.concatMap (x:
               if x ? nixcfg
-              then x.nixcfg.nixcfgs
+              then recur x
               else [ x ])
             (map (x:
               if lib.isString x
