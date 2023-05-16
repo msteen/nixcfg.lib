@@ -1,34 +1,33 @@
-{ lib }: config: let
-  nixcfgPrefix = "nixcfg-";
-
-  nixcfgInputs =
-    lib.filterMapAttrs (name: _: lib.hasPrefix nixcfgPrefix name)
-    (name: value: lib.nameValuePair (lib.removePrefix nixcfgPrefix name) value)
-    config.inputs;
-
-  inputNixcfgs = let
-    missingNixcfgs = lib.attrNames (removeAttrs nixcfgInputs config.nixcfgs);
-    missingNixcfgInputs = lib.filter (name: !nixcfgInputs ? ${name}) config.nixcfgs;
+{ lib }: self: let
+  recur = nixcfg: let
+    inherit (nixcfg) config;
+    nixcfgSources = lib.filterNixcfgSources config.sources;
+    missingNixcfgs = lib.attrNames (removeAttrs nixcfgSources (map (x:
+      if lib.isString x
+      then x
+      else x.config.name)
+    config.nixcfgs));
+    missingNixcfgSources = lib.filter (name: !nixcfgSources ? ${name}) (lib.filter lib.isString config.nixcfgs);
   in
     if lib.length missingNixcfgs > 0
-    then throw "The nixcfgs ${lib.concatNames missingNixcfgs} are listed as inputs, but not configured in the nixcfgs list."
-    else if lib.length missingNixcfgInputs > 0
-    then throw "The nixcfgs ${lib.concatNames missingNixcfgInputs} miss corresponding inputs prefixed with '${nixcfgPrefix}'."
-    else lib.attrVals config.nixcfgs nixcfgInputs;
+    then throw "The nixcfgs ${lib.concatNames missingNixcfgs} are listed as sources, but not configured in the nixcfgs list."
+    else if lib.length missingNixcfgSources > 0
+    then throw "The nixcfgs ${lib.concatNames missingNixcfgSources} miss corresponding sources prefixed with 'nixcfg-'."
+    else
+      lib.concatMap (x:
+        if lib.isAttrs x
+        then [ x ]
+        else
+          recur (import (
+            if lib.hasPrefix "/" x
+            then x
+            else nixcfgSources.${x}
+          )))
+      config.nixcfgs
+      ++ [ nixcfg ];
 
-  # This may contain duplicates.
-  allNixcfgs = lib.concatLists (lib.catAttrs "nixcfgs" inputNixcfgs) ++ [ config.inputs.self ];
-
-  # They will be deduplicated when converted to an attrset.
-  nixcfgsAttrs = lib.mapToAttrs (nixcfg: lib.nameValuePair nixcfg.config.name nixcfg) allNixcfgs;
-
-  # It can be very inefficient in Nix to check equality for complex values,
-  # so we compare names instead and look the values back up in the attrset.
-  nixcfgNames = lib.unique (lib.mapGetAttrPath [ "config" "name" ] allNixcfgs);
-
-  # An attrset is unordered, however `lib.unique` keeps the original order,
-  # so we use the deduplicated list of names to rebuild the ordered list.
-  nixcfgs = lib.attrVals nixcfgNames nixcfgsAttrs;
+  deduplicated = lib.deduplicateNixcfgs (recur self);
 in {
-  inherit nixcfgs nixcfgsAttrs;
+  nixcfgs = deduplicated.list;
+  nixcfgsAttrs = deduplicated.attrs;
 }

@@ -36,18 +36,17 @@ in {
       merge = lib.mergeOneOption;
     };
 
-    # The raw type won't try to merge.
-    flake = types.raw;
+    nixcfg = types.attrs;
 
     # Helper to make it easier to define simple submodules.
     mkSubmoduleOptions = options: types.submodule { inherit options; };
 
     configurationOptions = type: {
-      inputs = lib.mkOption {
-        type = types.lazyAttrsOf flake;
+      sources = lib.mkOption {
+        type = types.lazyAttrsOf types.path;
         default = { };
         description = ''
-          The flake inputs of this ${type} configuration. They extend those of the nixcfg.
+          The sources of this ${type} configuration. They extend those of the nixcfg.
         '';
       };
 
@@ -133,28 +132,21 @@ in {
         '';
       };
 
-      inputs = lib.mkOption {
-        type = types.submodule {
-          freeformType = types.lazyAttrsOf flake;
-          options.self = lib.mkOption {
-            type = flake;
-            description = ''
-              The self input, i.e. the self-reference, is expected to be available.
-              It's metadata is used for setting various defaults.
-            '';
-          };
-        };
+      sources = lib.mkOption {
+        type = types.attrsOf types.path;
         description = ''
-          The flake inputs of this nixcfg.
+          The sources of this nixcfg.
         '';
       };
 
       nixcfgs = lib.mkOption {
-        type = types.listOf types.str;
+        type = types.listOf (types.either types.str nixcfg);
         default = [ ];
         description = ''
           The list of nixcfgs to be merged with this one in the order listed.
-          The inputs cannot be used to determine this, because attrsets are unordered,
+          These can be nixcfg names referring to their source, or actual nixcfgs.
+
+          The sources cannot be used to determine this, because attrsets are unordered,
           yet the order is significant in how things will be merged.
         '';
       };
@@ -192,11 +184,11 @@ in {
 
       channels = lib.mkOption {
         type = types.lazyAttrsOf (mkSubmoduleOptions {
-          input = lib.mkOption {
-            type = types.nullOr flake;
+          source = lib.mkOption {
+            type = types.nullOr types.path;
             default = null;
             description = ''
-              The nixpkgs flake input that should be used for this channel.
+              The nixpkgs source that should be used for this channel.
             '';
           };
           config = lib.mkOption {
@@ -212,7 +204,7 @@ in {
             type = types.listOf types.path;
             default = [ ];
             description = ''
-              The list of patches that should be applied to the nixpkgs input of this channel.
+              The list of patches that should be applied to the nixpkgs source of this channel.
             '';
           };
           overlays = lib.mkOption {

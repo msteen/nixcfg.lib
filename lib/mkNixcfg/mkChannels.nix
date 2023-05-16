@@ -1,38 +1,41 @@
-{ lib }: let
+{
+  lib,
+  defaultOverlays,
+}: let
   importChannel = nixcfgsOverlays: {
-    input,
+    source,
     system,
     config ? { },
     overlays ? [ ],
     ...
   }:
     importNixpkgs {
-      inherit input system;
+      inherit source system;
       config = { allowUnfree = true; } // config;
       overlays =
-        (
+        defaultOverlays
+        ++ (
           if lib.isFunction overlays
           then overlays nixcfgsOverlays
           else overlays
-        )
-        ++ [ (final: prev: { inherit input; }) ];
+        );
     };
 
   importNixpkgs = {
-    input,
+    source,
     system,
     config ? { },
     overlays ? [ ],
     ...
   }:
-  # Skip impure.nix: ${input} -> ${input}/pkgs/top-level/impure.nix -> ${input}/pkgs/top-level
-    import (input + "/pkgs/top-level") {
+  # Skip impure.nix: ${source} -> ${source}/pkgs/top-level/impure.nix -> ${source}/pkgs/top-level
+    import (source + "/pkgs/top-level") {
       localSystem = { inherit system; };
       inherit config overlays;
     };
 
   patchChannel = name: channel @ {
-    input,
+    source,
     system,
     patches ? [ ],
     ...
@@ -42,9 +45,9 @@
     else
       channel
       // {
-        input = (importNixpkgs { inherit input system; }).applyPatches {
-          name = "nixpkgs-${name}-patched${lib.optionalString (input ? shortRev) ".git.${input.shortRev}"}";
-          src = input;
+        source = (importNixpkgs { inherit source system; }).applyPatches {
+          name = "nixpkgs-${name}-patched";
+          src = source;
           inherit patches;
         };
       };
@@ -52,21 +55,21 @@ in
   {
     nixcfgsOverlays,
     channels,
-  }: inputs: systems:
+  }: sources: systems:
     lib.genAttrs systems (system:
       lib.mapAttrs (name: channel:
         importChannel nixcfgsOverlays (patchChannel name channel)) (
-        lib.mapAttrs (_: input: { inherit input system; }) inputs
+        lib.mapAttrs (_: source: { inherit source system; }) sources
         // lib.mapAttrs (
           name: channel: let
-            input =
-              if channel.input or null == null
+            source =
+              if channel.source or null == null
               then
-                inputs.${name}
-                or (throw "Channel '${name}' is missing the required input attribute or does not have it implicit through inputs.")
-              else channel.input;
+                sources.${name}
+                or (throw "Channel '${name}' is missing the required source attribute or does not have it implicit through sources.")
+              else channel.source;
           in
-            channel // { inherit input system; }
+            channel // { inherit source system; }
         )
         channels
       ))

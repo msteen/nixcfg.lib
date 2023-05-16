@@ -16,11 +16,6 @@
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.utils.follows = "extra-container/flake-utils";
     };
-
-    flake-compat = {
-      url = "github:edolstra/flake-compat";
-      flake = false;
-    };
   };
 
   outputs = _: { };

@@ -8,7 +8,7 @@
   mkHomeModules,
 }: {
   name,
-  inputs,
+  sources,
   system,
   stateVersion,
   modules,
@@ -18,12 +18,12 @@
 }:
 mkDefaultModules "nixos" name
 ++ modules
-++ lib.optional config.requireSops inputs.sops-nix.nixosModules.sops
+++ lib.optional config.requireSops (sources.sops-nix + "/modules/sops")
 ++ lib.optionals (homeConfigurationsArgs ? ${name}) (let
   homeConfigurationArgs = homeConfigurationsArgs.${name};
   specialArgs = mkSpecialArgs "home" homeConfigurationArgs;
 in [
-  homeConfigurationArgs.inputs.home-manager.nixosModules.home-manager
+  (homeConfigurationArgs.sources.home-manager + "/nixos")
   {
     home-manager = {
       useGlobalPkgs = true;
@@ -54,34 +54,25 @@ in [
     users.groups = lib.mapAttrs (_: _: { }) homeConfigurationArgs.users;
   }
 ])
-++ lib.singleton (let
-  inherit (config.inputs) self;
-in
-  { config, ... }: {
-    nix.extraOptions = "extra-experimental-features = ${lib.concatStringsSep " "
-      ([ "nix-command" "flakes" ] ++ lib.optional (!lib.versionAtLeast config.nix.package.version "2.5pre") "ca-references")}";
+++ lib.singleton ({ config, ... }: {
+  nix.extraOptions = "extra-experimental-features = ${lib.concatStringsSep " "
+    ([ "nix-command" "flakes" ] ++ lib.optional (!lib.versionAtLeast config.nix.package.version "2.5pre") "ca-references")}";
 
-    environment.etc =
-      lib.mapAttrs' (name: input: {
-        name = "nix/inputs/${name}";
-        value.source = input.outPath;
-      })
-      inputs;
-    nix.nixPath = [ "/etc/nix/inputs" ];
-    nix.registry = lib.mapAttrs (_: input: { flake = input; }) inputs;
+  environment.etc =
+    lib.mapAttrs' (name: source: {
+      name = "nix/sources/${name}";
+      value = { inherit source; };
+    })
+    sources;
+  nix.nixPath = [ "/etc/nix/sources" ];
 
-    networking.hostName = lib.mkDefault name;
-    networking.hostId = lib.mkDefault (lib.substring 0 8 (lib.hashString "sha256" name));
+  networking.hostName = lib.mkDefault name;
+  networking.hostId = lib.mkDefault (lib.substring 0 8 (lib.hashString "sha256" name));
 
-    nixpkgs.pkgs = lib.mkDefault pkgs;
-    nixpkgs.overlays = [ (final: prev: channels) ] ++ defaultOverlays;
+  nixpkgs.pkgs = lib.mkDefault pkgs;
+  nixpkgs.overlays = [ (final: prev: channels) ] ++ defaultOverlays;
 
-    environment.systemPackages = [ self.formatter.${system} ];
+  environment.systemPackages = [ pkgs.alejandra ];
 
-    # The attributes `rev` and `shortRev` are only available when the input is marked to be a git input.
-    # Even something with type path contains a git repo, it will be ignored.
-    system.nixos.revision = lib.mkDefault config.system.configurationRevision;
-    system.nixos.versionSuffix = lib.mkDefault ".${lib.substring 0 8 (self.lastModifiedDate or "19700101")}.${self.shortRev or "dirty"}";
-    system.stateVersion = stateVersion;
-    system.configurationRevision = lib.mkIf (self ? rev) self.rev;
-  })
+  system.stateVersion = stateVersion;
+})

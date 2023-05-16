@@ -1,11 +1,18 @@
 {
   lib,
   nixcfg,
-  nixpkgs,
+  sources,
+  alejandraOverlay,
 }: {
   traceJSON = x: lib.trace (lib.toJSON x) x;
   traceJSONMap = f: x: lib.trace (lib.toJSON (f x)) x;
-  traceJSONValue = value: lib.traceJSONMap (lib.const value);
+  traceJSONValue = value: x: lib.trace (lib.toJSON value) x;
+
+  readFileType =
+    builtins.readFileType
+    or (path:
+      (builtins.readDir (dirOf path)).${baseNameOf path}
+      or throw "getting status of '${toString path}': No such file or directory");
 
   concatStringsEnglish = sep: list: let
     listLength = lib.length list;
@@ -145,7 +152,99 @@
 
   listAttrs = import ./listAttrs.nix { inherit lib; };
 
-  mkNixcfg = import ./mkNixcfg { inherit lib nixcfg nixpkgs; };
+  flakeCompat = let
+    lock = lib.fromJSON (lib.readFile (nixcfg.outPath + "/flake.lock"));
+  in
+    import (lib.fetchTarball {
+      url = "https://github.com/edolstra/flake-compat/archive/${lock.nodes.flake-compat.locked.rev}.tar.gz";
+      sha256 = lock.nodes.flake-compat.locked.narHash;
+    });
+
+  importFlake = path: (lib.flakeCompat { src = path; }).defaultNix;
+
+  filterNixcfgSources = sources:
+    lib.filterMapAttrs (name: _: lib.hasPrefix "nixcfg-" name)
+    (name: value: lib.nameValuePair (lib.removePrefix "nixcfg-" name) value)
+    sources;
+
+  # This list of nixcfgs is still allowed to contain names and paths,
+  # so we have to do additional filtering where necessary.
+  deduplicateNixcfgs = nixcfgs: let
+    # They will be deduplicated when converted to an attrset.
+    attrs =
+      lib.mapToAttrs (nixcfg: lib.nameValuePair nixcfg.config.name nixcfg)
+      (lib.filter lib.isAttrs nixcfgs);
+
+    # It can be very inefficient in Nix to check equality for complex values,
+    # so we compare names instead and look the values back up in the attrset.
+    names = lib.unique (lib.filter lib.isString (map (x:
+      if lib.isAttrs x
+      then x.config.name
+      else toString x)
+    nixcfgs));
+
+    # An attrset is unordered, however `lib.unique` keeps the original order,
+    # so we use the deduplicated list of names to rebuild the ordered list.
+    list = map (name: attrs.${name} or name) names;
+  in { inherit attrs list names; };
+
+  mkNixcfg = config: let
+    self = import ./mkNixcfg { inherit alejandraOverlay lib nixcfg sources; } self config;
+  in
+    self;
+
+  mkNixcfgFlake = config: let
+    nixcfgInputs = lib.filterNixcfgSources config.inputs;
+    nixcfg = lib.mkNixcfg ({
+        path = config.inputs.self.outPath;
+        sources = lib.mkSources config.inputs;
+      }
+      // removeAttrs config [ "inputs" ]
+      // {
+        nixcfgs =
+          (lib.deduplicateNixcfgs (lib.concatMap (x:
+              if x ? nixcfg
+              then x.nixcfg.nixcfgs
+              else [ x ])
+            (map (x:
+              if lib.isString x
+              then nixcfgInputs.${x} or x
+              else x)
+            config.nixcfgs or [ ])))
+          .list;
+      });
+    configurationTypes = lib.attrNames nixcfg.configurations;
+    self =
+      {
+        inherit nixcfg;
+        packages = let
+          list = lib.concatMapAttrsToList (type:
+            lib.mapAttrsToList (name: value: let
+              configuration = nixcfg.configurations.${type}.${name};
+              system =
+                configuration.system
+                or configuration.pkgs.system
+                or (throw "The ${type} configuration is missing a system or pkgs attribute.");
+            in { inherit name system type value; }))
+          nixcfg.packages;
+        in
+          lib.mapAttrs (_: group:
+            lib.mapAttrs (_:
+              lib.listToAttrs)
+            (lib.groupBy (x: x.type) group))
+          (lib.groupBy (x: x.system) list);
+        inherit (config) overlays;
+        formatter =
+          lib.genAttrs config.systems (system:
+            self.legacyPackages.${system}.alejandra);
+        legacyPackages = lib.mapAttrs (_: x: x.nixpkgs) nixcfg.channels;
+      }
+      // lib.mapAttrs' (type: lib.nameValuePair "${type}Configurations") nixcfg.configurations
+      // lib.getAttrs (lib.concatMap (type: [ "${type}Modules" "${type}Profiles" ]) configurationTypes) config;
+  in
+    self;
+
+  mkSources = inputs: lib.mapAttrs (_: input: input.outPath) (removeAttrs inputs [ "self" ]);
 
   dummyNixosModule = {
     boot.loader.grub.enable = false;
