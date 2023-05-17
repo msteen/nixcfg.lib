@@ -73,7 +73,7 @@ in
   self: rawConfig: let
     config = mkConfig rawConfig;
 
-    inherit (mkNixcfgs self) nixcfgs nixcfgsAttrs;
+    inherit (mkNixcfgs config.sources config.nixcfgs self) nixcfgs nixcfgsAttrs;
 
     nixcfgsSources = lib.concatAttrs (lib.mapGetAttrPath [ "config" "sources" ] nixcfgs);
     nixcfgsNixpkgsSources = sourcesWithDefaultNixpkgs (filterNixpkgsSources nixcfgsSources);
@@ -340,8 +340,10 @@ in
 
     packages = lib.mapAttrs (type: lib.mapAttrs (_: configurationToPackage.${type})) configurations;
   in {
-    inherit config configurations libOverlays nixcfgs packages;
+    inherit configurations libOverlays nixcfgs packages;
     channels = nixcfgsChannels;
+
+    config = config // { inherit nixcfgs; };
 
     # To make nixcfg's extensions to lib also available outside configurations.
     lib = outputLib;

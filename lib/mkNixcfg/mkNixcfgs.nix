@@ -1,13 +1,13 @@
-{ lib }: self: let
-  recur = nixcfg: let
-    inherit (nixcfg) config;
-    nixcfgSources = lib.filterNixcfgSources config.sources;
+{ lib }: sources: nixcfgs: self: let
+  recurNixcfg = nixcfg: recur nixcfg.config.sources nixcfg.config.nixcfgs ++ [ nixcfg ];
+  recur = sources: nixcfgs: let
+    nixcfgSources = lib.filterNixcfgSources sources;
     missingNixcfgs = lib.attrNames (removeAttrs nixcfgSources (map (x:
       if lib.isString x
       then x
       else x.config.name)
-    config.nixcfgs));
-    missingNixcfgSources = lib.filter (name: !nixcfgSources ? ${name}) (lib.filter lib.isString config.nixcfgs);
+    nixcfgs));
+    missingNixcfgSources = lib.filter (name: !nixcfgSources ? ${name}) (lib.filter lib.isString nixcfgs);
   in
     if lib.length missingNixcfgs > 0
     then throw "The nixcfgs ${lib.concatNames missingNixcfgs} are listed as sources, but not configured in the nixcfgs list."
@@ -18,15 +18,14 @@
         if lib.isAttrs x
         then [ x ]
         else
-          recur (import (
+          recurNixcfg (import (
             if lib.hasPrefix "/" x
             then x
             else nixcfgSources.${x}
           )))
-      config.nixcfgs
-      ++ [ nixcfg ];
+      nixcfgs;
 
-  deduplicated = lib.deduplicateNixcfgs (recur self);
+  deduplicated = lib.deduplicateNixcfgs (recur sources nixcfgs ++ [ self ]);
 in {
   nixcfgs = deduplicated.list;
   nixcfgsAttrs = deduplicated.attrs;
