@@ -194,7 +194,6 @@
     self;
 
   mkNixcfgFlake = config: let
-    nixcfgInputs = lib.filterNixcfgSources config.inputs;
     nixcfg = lib.mkNixcfg ({
         path = config.inputs.self.outPath;
         sources = lib.mkSources config.inputs;
@@ -202,26 +201,18 @@
       // removeAttrs config [ "inputs" ]
       // {
         nixcfgs = let
-          recur = flake:
-            (lib.concatMap (x: let
-              name = "nixcfg-${x}";
-            in
-              if lib.isString x && flake.inputs.${name}
-              then recur flake.inputs.${name}
-              else [ x ])
-            flake.nixcfg.config.nixcfgs)
-            ++ [ flake.nixcfg ];
+          recurFlake = flake: recur flake.inputs flake.nixcfg.config.nixcfgs ++ [ flake.nixcfg ];
+          recur = inputs: nixcfgs: (lib.concatMap (x: let
+            name = "nixcfg-${x}";
+          in
+            if x ? nixcfg
+            then recurFlake x
+            else if lib.isString x && inputs ? ${name}
+            then recurFlake inputs.${name}
+            else [ x ])
+          nixcfgs);
         in
-          (lib.deduplicateNixcfgs (lib.concatMap (x:
-              if x ? nixcfg
-              then recur x
-              else [ x ])
-            (map (x:
-              if lib.isString x
-              then nixcfgInputs.${x} or x
-              else x)
-            config.nixcfgs or [ ])))
-          .list;
+          recur config.inputs config.nixcfgs or [ ];
       });
     configurationTypes = lib.attrNames nixcfg.configurations;
     self =
