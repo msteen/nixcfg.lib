@@ -33,7 +33,7 @@
             chmod +x $out/bin/container
           '';
       });
-    hello = configuration: configuration.activationPackage;
+    home = configuration: configuration.activationPackage;
   };
 
   mkConfig = import ./mkConfig.nix { inherit lib nixcfg; };

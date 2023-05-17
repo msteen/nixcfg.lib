@@ -235,21 +235,24 @@
                   ++ lib.singleton (let
                     inherit (config) inputs;
                     inherit (inputs) self;
-                  in {
-                    nix.registry = lib.mapAttrs (_: input: { flake = input; }) inputs;
+                  in
+                    { config, ... }: {
+                      nix.registry = lib.mapAttrs (_: input: { flake = input; }) inputs;
 
-                    # The attributes `rev` and `shortRev` are only available when the input is marked to be a git input.
-                    # Even something with type path contains a git repo, it will be ignored.
-                    system.configurationRevision = lib.mkIf (self ? rev) self.rev;
-                    system.nixos.revision = lib.mkDefault config.system.configurationRevision;
-                    system.nixos.versionSuffix = lib.mkDefault ".${lib.substring 0 8 (self.lastModifiedDate or "19700101")}.${self.shortRev or "dirty"}";
-                  });
+                      # The attributes `rev` and `shortRev` are only available when the input is marked to be a git input.
+                      # Even something with type path contains a git repo, it will be ignored.
+                      system.configurationRevision = lib.mkIf (self ? rev) self.rev;
+                      system.nixos.revision = lib.mkDefault config.system.configurationRevision;
+                      system.nixos.versionSuffix = lib.mkDefault ".${lib.substring 0 8 (self.lastModifiedDate or "19700101")}.${self.shortRev or "dirty"}";
+                    });
               }
           )
           config.nixosConfigurations;
       });
     configurationTypes = lib.attrNames nixcfg.configurations;
-    self =
+    self = let
+      inherit (nixcfg) config;
+    in
       {
         inherit nixcfg;
         packages = let
@@ -260,14 +263,13 @@
                 configuration.system
                 or configuration.pkgs.system
                 or (throw "The ${type} configuration is missing a system or pkgs attribute.");
-            in { inherit name system type value; }))
+            in {
+              inherit system value;
+              name = "${type}_${name}";
+            }))
           nixcfg.packages;
         in
-          lib.mapAttrs (_: group:
-            lib.mapAttrs (_:
-              lib.listToAttrs)
-            (lib.groupBy (x: x.type) group))
-          (lib.groupBy (x: x.system) list);
+          lib.mapAttrs (_: lib.listToAttrs) (lib.groupBy (x: x.system) list);
         inherit (config) overlays;
         formatter =
           lib.genAttrs config.systems (system:
