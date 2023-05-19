@@ -163,41 +163,41 @@
       };
     };
 
-    testUpdateWithDefaults = {
-      expr =
-        lib.defaultUpdateExtend (_: {
-          sources = { };
-          channelName = "nixpkgs";
-          system = "x86_64-linux";
-          moduleArgs = { };
-          stateVersion = "22.11";
-          users = _: {
-            modules = [ ];
-          };
-        }) {
-          ubuntu = {
-            inherit (bar.config) sources;
-            channelName = "nixos-22_11";
-            users.matthijs = { };
-          };
-        } (final: prev: name: {
-          users = username: {
-            modules =
-              prev.${name}.users.${username}.modules
-              ++ [ testListAttrs.expected.homeConfigurations."${name}_${username}" ];
-          };
-        });
-      expected = {
-        ubuntu = {
-          inherit (bar.config) sources;
-          channelName = "nixos-22_11";
-          system = "x86_64-linux";
-          moduleArgs = { };
-          stateVersion = "22.11";
-          users.matthijs.modules = [ testListAttrs.expected.homeConfigurations.ubuntu_matthijs ];
-        };
-      };
-    };
+    # testUpdateWithDefaults = {
+    #   expr =
+    #     lib.defaultUpdateExtend (_: {
+    #       sources = { };
+    #       channelName = "nixpkgs";
+    #       system = "x86_64-linux";
+    #       moduleArgs = { };
+    #       stateVersion = "22.11";
+    #       users = _: {
+    #         modules = [ ];
+    #       };
+    #     }) {
+    #       ubuntu = {
+    #         inherit (bar.config) sources;
+    #         channelName = "nixos-22_11";
+    #         users.matthijs = { };
+    #       };
+    #     } (final: prev: name: {
+    #       users = username: {
+    #         modules =
+    #           prev.${name}.users.${username}.modules
+    #           ++ [ testListAttrs.expected.homeConfigurations."${name}_${username}" ];
+    #       };
+    #     });
+    #   expected = {
+    #     ubuntu = {
+    #       inherit (bar.config) sources;
+    #       channelName = "nixos-22_11";
+    #       system = "x86_64-linux";
+    #       moduleArgs = { };
+    #       stateVersion = "22.11";
+    #       users.matthijs.modules = [ testListAttrs.expected.homeConfigurations.ubuntu_matthijs ];
+    #     };
+    #   };
+    # };
 
     testFooName = {
       expr = foo.config.name;

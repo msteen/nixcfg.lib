@@ -36,8 +36,8 @@
     home = configuration: configuration.activationPackage;
   };
 
-  mkConfig = import ./mkConfig.nix { inherit lib nixcfg; };
-  mkNixcfgs = import ./mkNixcfgs.nix { inherit lib; };
+  mkConfig = import ../mkConfig { inherit lib; };
+  mkNixcfgs = import ../mkConfig/mkNixcfgs.nix { inherit lib; };
   mkChannels = import ./mkChannels.nix {
     inherit lib;
     defaultOverlays = [ alejandraOverlay ];
@@ -88,12 +88,7 @@ in
     # in the configured lib overlays (via `prev.lib`).
     libOverlays = lib.singleton (final: prev: { lib = nixpkgsLib; }) ++ config.lib.overlays;
 
-    # The nixpkgs lib is extended with all builtins, because some of them are missing.
-    # Even some of the older builtins.
-    # For debugging purposes and in case it can be useful
-    # the nixpkgs source used for the lib is also made available.
-    # The reason we do not expose it as `path` is that it would conflict with `builtins.path`.
-    nixpkgsLib = (import (libNixpkgs + "/lib")).extend (final: prev: { source = libNixpkgs; } // builtins);
+    nixpkgsLib = lib.mkNixpkgsLib libNixpkgs;
     nixcfgsLib = lib.extendsList (lib.concatLists (lib.catAttrs "libOverlays" nixcfgs)) (final: nixcfg.lib);
     outputLib = nixpkgsLib.extend (final: prev:
       nixcfgsLib

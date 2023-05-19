@@ -1,7 +1,8 @@
 {
   lib,
-  nixcfg,
-}: { config, ... }: let
+  config,
+  ...
+}: let
   inherit (lib) types;
 
   # Unfortunately there is no way to derive this list from within this module,

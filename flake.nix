@@ -24,13 +24,19 @@
     # We cannot reuse the lib output, as a lot of lib code is already needed to determine it.
     lib = nixcfg.lib // nixpkgs.lib // builtins;
 
-    sources = lib.mkSources { inherit nixpkgs; };
+    sources = lib.inputsToSources { inherit nixpkgs; };
 
     nixcfg = {
-      lib = import ./lib {
-        inherit lib nixcfg sources;
-        alejandraOverlay = alejandra.overlay;
-      };
+      lib =
+        (import ./lib {
+          nixpkgs = nixpkgs.outPath;
+        })
+        .extend (final: prev:
+          import ./nixcfg {
+            inherit nixcfg sources;
+            lib = (prev.mkNixpkgsLib nixpkgs.outPath).extend (_: _: prev);
+            alejandraOverlay = alejandra.overlay;
+          });
 
       inherit (self) outPath;
     };
@@ -40,7 +46,7 @@
     packages = lib.genAttrs [ "x86_64-linux" ] (system: let
       pkgs = nixpkgs.legacyPackages.${system};
     in {
-      htmlDocs = import ./lib/mkNixcfg/docs { inherit lib nixcfg pkgs; };
+      htmlDocs = import ./docs { inherit lib nixcfg pkgs; };
     });
 
     tests = let
