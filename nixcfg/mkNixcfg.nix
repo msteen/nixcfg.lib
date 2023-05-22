@@ -6,8 +6,6 @@
 }: let
   inherit (sources) nixpkgs;
 
-  configurationTypes = lib.attrNames requiredSources;
-
   requiredSources = {
     nixos = [ ];
     container = [ "extra-container" ];
@@ -106,7 +104,7 @@ in
 
       nixcfgsChannels = mkChannels' nixcfgsNixpkgsSources config.systems;
 
-      configurationsArgs = lib.genAttrs configurationTypes (
+      configurationsArgs = lib.genAttrs lib.configurationTypes (
         type:
           lib.mapAttrs (name: {
               system,

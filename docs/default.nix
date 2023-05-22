@@ -26,7 +26,7 @@
     mkModuleUrl = path: "https://github.com/msteen/nixcfg.lib/blob/master/${path}#blob-path";
     channelName = "nixcfg";
     modules = [
-      (import ../modules/nixcfg.nix { inherit lib nixcfg; })
+      ../modules/nixcfg.nix
       scrubbedPkgsModule
     ];
     docBook.id = "nixcfg-options";

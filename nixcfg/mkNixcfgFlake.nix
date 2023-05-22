@@ -54,7 +54,6 @@
         )
         config.nixosConfigurations;
     });
-  configurationTypes = lib.attrNames nixcfg.configurations;
   self = let
     inherit (nixcfg) config;
   in
@@ -82,6 +81,6 @@
       legacyPackages = lib.mapAttrs (_: x: x.nixpkgs) nixcfg.channels;
     }
     // lib.mapAttrs' (type: lib.nameValuePair "${type}Configurations") nixcfg.configurations
-    // lib.getAttrs (lib.concatMap (type: [ "${type}Modules" "${type}Profiles" ]) configurationTypes) config;
+    // lib.getAttrs (lib.concatMap (type: [ "${type}Modules" "${type}Profiles" ]) lib.configurationTypes) config;
 in
   self

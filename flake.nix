@@ -28,6 +28,7 @@
         inherit lib nixcfg sources;
         alejandraOverlay = alejandra.overlay;
       });
+    # FIXME: Note on how it needs to be in this order for evalModules to pass it along correctly.
     lib = (nixcfgLib.mkNixpkgsLib nixpkgs.outPath).extend (_: _: nixcfgLib);
 
     nixcfg = {
