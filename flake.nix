@@ -20,28 +20,22 @@
     alejandra,
     ...
   }: let
-    # Do not allow overwriting expected behaviours of builtins and standard lib.
-    # We cannot reuse the lib output, as a lot of lib code is already needed to determine it.
-    lib = nixcfg.lib // nixpkgs.lib // builtins;
-
     sources = lib.inputsToSources { inherit nixpkgs; };
 
-    nixcfg = {
-      lib =
-        (import ./lib {
-          nixpkgs = nixpkgs.outPath;
-        })
-        .extend (final: prev:
-          import ./nixcfg {
-            inherit nixcfg sources;
-            lib = (prev.mkNixpkgsLib nixpkgs.outPath).extend (_: _: prev);
-            alejandraOverlay = alejandra.overlay;
-          });
+    baseNixcfgLib = import ./lib { nixpkgs = nixpkgs.outPath; };
+    nixcfgLib = baseNixcfgLib.extend (_: _:
+      import ./nixcfg {
+        inherit lib nixcfg sources;
+        alejandraOverlay = alejandra.overlay;
+      });
+    lib = (nixcfgLib.mkNixpkgsLib nixpkgs.outPath).extend (_: _: nixcfgLib);
 
+    nixcfg = {
+      lib = nixcfgLib;
       inherit (self) outPath;
     };
   in {
-    inherit (nixcfg) lib;
+    inherit lib;
 
     packages = lib.genAttrs [ "x86_64-linux" ] (system: let
       pkgs = nixpkgs.legacyPackages.${system};
