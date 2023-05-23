@@ -4,10 +4,10 @@ cd "$(dirname -- "$([[ -v BASH_SOURCE ]] && echo "${BASH_SOURCE[0]}" || echo "$0
 cd ..
 
 out=$(nix eval .#tests "$@")
-if [[ $out == null ]]; then
+if [[ $out == '[ ]' ]]; then
   echo "all tests passed"
 else
   echo "some tests failed:"
-  echo "$out"
+  alejandra <<< "$out"
   exit 1
 fi

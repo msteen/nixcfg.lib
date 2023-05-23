@@ -44,14 +44,13 @@
       htmlDocs = import ./docs { inherit lib nixcfg pkgs; };
     });
 
-    tests = let
-      results = import ./test/lib {
+    tests =
+      import ./test/lib {
+        inherit lib;
+      }
+      ++ import ./test/nixcfg {
         inherit lib nixcfg;
         inherit (sources) nixpkgs;
       };
-    in
-      if results == [ ]
-      then null
-      else results;
   };
 }
