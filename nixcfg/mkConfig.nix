@@ -70,79 +70,72 @@
   #         default = import listedArgs.overlay;
   #       };
 
-  listedConfig = {
-    # Overlays are not allowed to be paths, but expected to be a function.
-    # See the overlays option for more details.
-    overlays = lib.mapAttrs (_: import) listedArgs.overlays;
-    lib.overlays = map import (lib.optionalAttr "libOverlay" listedArgs);
+  listedConfig =
+    {
+      # Overlays are not allowed to be paths, but expected to be a function.
+      # See the overlays option for more details.
+      overlays = lib.mapAttrs (_: import) listedArgs.overlays;
+      lib.overlays = map import (lib.optionalAttr "libOverlay" listedArgs);
 
-    # For data, we are only interested in the values, not the paths that declare them.
-    data = lib.mapAttrs (_: import) listedArgs.data;
+      # For data, we are only interested in the values, not the paths that declare them.
+      data = lib.mapAttrs (_: import) listedArgs.data;
 
-    nixosConfigurations = defaultFromListed "nixos" (toListed listedArgs.nixosConfigurations);
-    containerConfigurations = defaultFromListed "container" (toListed listedArgs.containerConfigurations);
+      nixosConfigurations = defaultFromListed "nixos" (toListed listedArgs.nixosConfigurations);
+      containerConfigurations = defaultFromListed "container" (toListed listedArgs.containerConfigurations);
 
-    # Home configurations have a different directory structure,
-    # so we handle the listed files differently too.
-    homeConfigurations = homeFromListed (toListed listedArgs.homeConfigurations);
+      # Home configurations have a different directory structure,
+      # so we handle the listed files differently too.
+      homeConfigurations = homeFromListed (toListed listedArgs.homeConfigurations);
 
-    sopsConfig = listedArgs.sopsConfig or null;
-  };
-
-  mergedConfig =
-    config
-    // {
-      overlays = listedConfig.overlays // config.overlays or { };
-      lib = config.lib or { } // { overlays = listedConfig.lib.overlays ++ config.lib.overlays or [ ]; };
-      data = listedConfig.data // config.data or { };
-      nixosConfigurations =
-        listedConfig.nixosConfigurations
-        // lib.mapAttrs (
-          name: configuration:
-            if listedConfig.nixosConfigurations ? ${name}
-            then configuration // { modules = listedConfig.nixosConfigurations.${name}.modules ++ configuration.modules or [ ]; }
-            else configuration
-        )
-        config.nixosConfigurations or { };
-      containerConfigurations =
-        listedConfig.containerConfigurations
-        // lib.mapAttrs (
-          name: configuration:
-            if listedConfig.containerConfigurations ? ${name}
-            then configuration // { modules = listedConfig.containerConfigurations.${name}.modules ++ configuration.modules or [ ]; }
-            else configuration
-        )
-        config.containerConfigurations or { };
-      homeConfigurations =
-        listedConfig.homeConfigurations
-        // lib.mapAttrs (
-          name: configuration:
-            if listedConfig.homeConfigurations ? ${name}
-            then
-              configuration
-              // {
-                users =
-                  listedConfig.homeConfigurations.${name}.users
-                  // lib.mapAttrs (
-                    username: user:
-                      user // { modules = listedConfig.homeConfigurations.${name}.users.${username}.modules ++ user.modules or [ ]; }
-                  )
-                  configuration.users or { };
-              }
-            else configuration
-        )
-        config.homeConfigurations or { };
-      inherit (listedConfig) sopsConfig;
+      sopsConfig = listedArgs.sopsConfig or null;
     }
     // lib.getAttrs (lib.concatMap (type: [ "${type}Modules" "${type}Profiles" ]) lib.configurationTypes) listedArgs;
+
+  toplevelOptions = import ./mkModule.nix { inherit lib; };
+
+  inherit (lib) types;
+
+  intermediateConfig = lib.evalModulesToConfig [
+    ({ config, ... }: {
+      _file = ./mkConfig.nix;
+      options =
+        toplevelOptions {
+          mkOption = config: lib.mkOption (removeAttrs config [ "apply" ]);
+          inherit config;
+        }
+        // {
+          apply = lib.mkOption {
+            type = lib.optionsToSubmodule (lib.filterMapAttrs (_: option: option.type.name == "functionTo") (_: option: option // { default = lib.const { }; }) (toplevelOptions {
+              mkOption = config: lib.mkOption (removeAttrs config [ "apply" ]);
+              # TODO: See if we can still type valid values.
+              # This could potentially be done by wrapping everything in `nullOr`,
+              # setting `null` to be the default, and filtering `null` and `{ }` recursively.
+              namedSubmodule = options: types.functionTo types.attrs;
+              inherit config;
+            }));
+            default = { };
+          };
+        };
+      config = listedConfig;
+    })
+    {
+      _file = (lib.unsafeGetAttrPos "name" config).file or null;
+      inherit config;
+    }
+  ];
+
+  finalConfig = lib.evalModulesToConfig [
+    ({ config, ... }: {
+      _file = ./mkModule.nix;
+      options = toplevelOptions { inherit config; };
+    })
+    {
+      _file = (lib.unsafeGetAttrPos "name" config).file or null;
+      config = lib.mkMerge [
+        (removeAttrs intermediateConfig [ "apply" ])
+        (lib.mapAttrs (name: f: lib.applyAttrs f intermediateConfig.${name}) intermediateConfig.apply)
+      ];
+    }
+  ];
 in
-  (lib.evalModules {
-    modules = [
-      ../modules/nixcfg.nix
-      {
-        _file = (lib.unsafeGetAttrPos "name" config).file or null;
-        config = mergedConfig;
-      }
-    ];
-  })
-  .config
+  finalConfig // { requireSops = finalConfig.sopsConfig != null; }

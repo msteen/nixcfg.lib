@@ -1,129 +1,125 @@
-{
-  lib,
-  config,
-  ...
-}: let
+{ lib }: let
   inherit (lib) types;
-in {
-  # This module will never be passed straight as a file
-  # due to being a function that produces a module,
-  # so explicitly state the defining file for the module system to use.
-  _file = ./.;
 
-  options = let
-    # There is no overlay type in the nixpkgs lib, so we have to define one ourselves.
-    # Based on: https://github.com/NixOS/nixpkgs/blob/1a411f23ba299db155a5b45d5e145b85a7aafc42/nixos/modules/misc/nixpkgs.nix#L45-L50
-    overlay = lib.mkOptionType {
-      name = "overlay";
-      description = "overlay";
-      check = lib.isFunction;
-      merge = lib.mergeOneOption;
+  # There is no overlay type in the nixpkgs lib, so we have to define one ourselves.
+  # Based on: https://github.com/NixOS/nixpkgs/blob/1a411f23ba299db155a5b45d5e145b85a7aafc42/nixos/modules/misc/nixpkgs.nix#L45-L50
+  overlay = lib.mkOptionType {
+    name = "overlay";
+    description = "overlay";
+    check = lib.isFunction;
+    merge = lib.mergeOneOption;
+  };
+
+  nixcfg = types.attrs;
+
+  configurationOptions = mkOption: type: {
+    sources = mkOption {
+      type = types.attrsOf types.path;
+      default = { };
+      description = ''
+        The sources of this ${type} configuration. They extend those of the nixcfg.
+      '';
     };
 
-    nixcfg = types.attrs;
-
-    # Helper to make it easier to define simple submodules.
-    mkSubmoduleOptions = options: types.submodule { inherit options; };
-
-    configurationOptions = type: {
-      sources = lib.mkOption {
-        type = types.lazyAttrsOf types.path;
-        default = { };
-        description = ''
-          The sources of this ${type} configuration. They extend those of the nixcfg.
-        '';
-      };
-
-      channelName = lib.mkOption {
-        type = types.str;
-        default = "nixpkgs";
-        description = ''
-          The channel that should be used for this ${type} configuration.
-        '';
-      };
-
-      system = lib.mkOption {
-        type = types.str;
-        default = "x86_64-linux";
-        description = ''
-          The system of this ${type} configuration.
-        '';
-      };
-
-      moduleArgs = lib.mkOption {
-        type = types.lazyAttrsOf types.raw;
-        default = { };
-        description = ''
-          The list of arguments that should be passed to the module system evaluation for this ${type} configuration.
-        '';
-      };
-
-      stateVersion = lib.mkOption {
-        type = types.str;
-        default = "22.11";
-        description = ''
-          The state version of this ${type} configuration.
-
-          By default the latest stable nixos version is used.
-        '';
-      };
+    channelName = mkOption {
+      type = types.str;
+      default = "nixpkgs";
+      description = ''
+        The channel that should be used for this ${type} configuration.
+      '';
     };
 
-    modulesOptions = type: {
-      modules = lib.mkOption {
-        type = types.listOf types.raw;
-        default = [ ];
-        description = ''
-          The list of ${type} modules that represent this ${type} configuration.
-
-          By default, if there exist a ${type} configuration file, it will be added to this list.
-        '';
-      };
+    system = mkOption {
+      type = types.str;
+      default = "x86_64-linux";
+      description = ''
+        The system of this ${type} configuration.
+      '';
     };
 
-    mkSimpleConfigurationsOption = type: args: let
-      default = {
-        type = types.lazyAttrsOf (mkSubmoduleOptions (configurationOptions type // modulesOptions type));
-        default = { };
-        apply = lib.mapAttrs (name: configuration:
-          if configuration.modules == [ ]
-          then throw "The ${type} configuration '${name}' is missing as configured modules or in '${type}/configs/'."
-          else if !(lib.elem configuration.system config.systems)
-          then throw "The ${type} configuration '${name}' has system '${configuration.system}', which is not listed in the supported systems."
-          else configuration);
-      };
-    in
-      lib.mkOption (
-        default
-        // args
-        // lib.optionalAttrs (args ? apply) {
-          apply = configurations: args.apply (default.apply configurations);
-        }
-      );
+    moduleArgs = mkOption {
+      type = types.attrsOf types.raw;
+      default = { };
+      description = ''
+        The list of arguments that should be passed to the module system evaluation for this ${type} configuration.
+      '';
+    };
+
+    stateVersion = mkOption {
+      type = types.str;
+      default = "22.11";
+      description = ''
+        The state version of this ${type} configuration.
+
+        By default the latest stable nixos version is used.
+      '';
+    };
+  };
+
+  modulesOptions = mkOption: type: {
+    modules = mkOption {
+      type = types.listOf types.raw;
+      default = [ ];
+      description = ''
+        The list of ${type} modules that represent this ${type} configuration.
+
+        By default, if there exist a ${type} configuration file, it will be added to this list.
+      '';
+    };
+  };
+
+  mkSimpleConfigurationsOption = {
+    mkOption,
+    namedSubmodule,
+    config,
+  }: type: args: let
+    default = {
+      type = namedSubmodule (configurationOptions mkOption type // modulesOptions mkOption type);
+      default = { };
+      apply = lib.mapAttrs (name: configuration:
+        if configuration.modules == [ ]
+        then throw "The ${type} configuration '${name}' is missing as configured modules or in '${type}/configs/'."
+        else if !(lib.elem configuration.system config.systems)
+        then throw "The ${type} configuration '${name}' has system '${configuration.system}', which is not listed in the supported systems."
+        else configuration);
+    };
   in
+    mkOption (
+      default
+      // args
+      // lib.optionalAttrs (args ? apply) {
+        apply = configurations: args.apply (default.apply configurations);
+      }
+    );
+
+  toplevelOptions = {
+    mkOption ? lib.mkOption,
+    namedSubmodule ? options: types.attrsOf (lib.optionsToSubmodule options),
+    config,
+  }:
     {
-      name = lib.mkOption {
+      name = mkOption {
         type = types.str;
         description = ''
           The name used to refer to this nixcfg.
         '';
       };
 
-      path = lib.mkOption {
+      path = mkOption {
         type = types.path;
         description = ''
           The path where this nixcfg is located and from where arguments will be listed.
         '';
       };
 
-      sources = lib.mkOption {
+      sources = mkOption {
         type = types.attrsOf types.path;
         description = ''
           The sources of this nixcfg.
         '';
       };
 
-      nixcfgs = lib.mkOption {
+      nixcfgs = mkOption {
         type = types.listOf (types.either types.str nixcfg);
         default = [ ];
         description = ''
@@ -135,8 +131,8 @@ in {
         '';
       };
 
-      overlays = lib.mkOption {
-        type = types.lazyAttrsOf overlay;
+      overlays = mkOption {
+        type = types.attrsOf overlay;
         default = { };
         description = ''
           The nixpkgs overlays that can be used to extend a nixpkgs channel.
@@ -146,7 +142,7 @@ in {
         '';
       };
 
-      systems = lib.mkOption {
+      systems = mkOption {
         type = types.listOf (types.enum (lib.sort' lib.platforms.all));
         default = [ "x86_64-linux" "aarch64-linux" ];
         description = ''
@@ -155,16 +151,16 @@ in {
         '';
       };
 
-      channels = lib.mkOption {
-        type = types.lazyAttrsOf (mkSubmoduleOptions {
-          source = lib.mkOption {
+      channels = mkOption {
+        type = namedSubmodule {
+          source = mkOption {
             type = types.nullOr types.path;
             default = null;
             description = ''
               The nixpkgs source that should be used for this channel.
             '';
           };
-          config = lib.mkOption {
+          config = mkOption {
             type = types.attrs;
             default = { };
             description = ''
@@ -173,21 +169,21 @@ in {
               By default all channels allow unfree packages.
             '';
           };
-          patches = lib.mkOption {
+          patches = mkOption {
             type = types.listOf types.path;
             default = [ ];
             description = ''
               The list of patches that should be applied to the nixpkgs source of this channel.
             '';
           };
-          overlays = lib.mkOption {
+          overlays = mkOption {
             type = types.either (types.listOf overlay) (types.functionTo (types.listOf overlay));
             default = [ ];
             description = ''
               The list of nixpkgs overlays that should be used for this channel.
             '';
           };
-        });
+        };
         default = { };
         description = ''
           The set of nixpkgs channels made available for use in the configurations.
@@ -195,10 +191,10 @@ in {
         '';
       };
 
-      lib = lib.mkOption {
-        type = mkSubmoduleOptions {
-          inherit (configurationOptions "lib") channelName;
-          overlays = lib.mkOption {
+      lib = mkOption {
+        type = lib.optionsToSubmodule {
+          inherit (configurationOptions mkOption "lib") channelName;
+          overlays = mkOption {
             type = types.listOf overlay;
             default = [ ];
             description = ''
@@ -212,16 +208,16 @@ in {
         '';
       };
 
-      data = lib.mkOption {
+      data = mkOption {
         # We want it to merge values where possible, which requires the unspecified type.
-        type = types.lazyAttrsOf types.unspecified;
+        type = types.attrsOf types.unspecified;
         default = { };
         description = ''
           Arbitrary Nix expressions that can be shared between configurations.
         '';
       };
 
-      nixosConfigurations = mkSimpleConfigurationsOption "nixos" {
+      nixosConfigurations = mkSimpleConfigurationsOption { inherit config mkOption namedSubmodule; } "nixos" {
         description = ''
           The set of nixos configurations.
           If a nixos configuration shares a name with a container configuration,
@@ -229,7 +225,7 @@ in {
         '';
       };
 
-      containerConfigurations = mkSimpleConfigurationsOption "container" {
+      containerConfigurations = mkSimpleConfigurationsOption { inherit config mkOption namedSubmodule; } "container" {
         apply = containerConfigurations: let
           inherit (config) nixosConfigurations;
         in
@@ -242,31 +238,29 @@ in {
         '';
       };
 
-      homeConfigurations = lib.mkOption {
-        type = types.lazyAttrsOf (mkSubmoduleOptions (
-          configurationOptions "home"
+      homeConfigurations = mkOption {
+        type = namedSubmodule (
+          configurationOptions mkOption "home"
           // {
-            users = lib.mkOption {
-              type = types.lazyAttrsOf (types.submodule ({ name, ... }: {
-                options =
-                  modulesOptions "home"
-                  // {
-                    homeDirectory = lib.mkOption {
-                      type = types.path;
-                      default = "/home/${name}";
-                      description = ''
-                        The home directory of this user.
-                      '';
-                    };
+            users = mkOption {
+              type = namedSubmodule (name:
+                modulesOptions mkOption "home"
+                // {
+                  homeDirectory = mkOption {
+                    type = types.path;
+                    default = "/home/${name}";
+                    description = ''
+                      The home directory of this user.
+                    '';
                   };
-              }));
+                });
               default = { };
               description = ''
                 The set of users available in this home configuration.
               '';
             };
           }
-        ));
+        );
         default = { };
         apply = lib.mapAttrs (name: homeConfiguration: let
           nixosConfiguration = config.nixosConfigurations.${name};
@@ -295,22 +289,12 @@ in {
         '';
       };
 
-      sopsConfig = lib.mkOption {
+      sopsConfig = mkOption {
         internal = true;
         readOnly = true;
         type = types.nullOr types.path;
         description = ''
           The path to the SOPS config file, if available.
-        '';
-      };
-
-      requireSops = lib.mkOption {
-        internal = true;
-        readOnly = true;
-        type = types.bool;
-        default = config.sopsConfig != null;
-        description = ''
-          Whether SOPS support is required.
         '';
       };
     }
@@ -319,7 +303,7 @@ in {
       kind,
       name,
     }:
-      lib.nameValuePair name (lib.mkOption {
+      lib.nameValuePair name (mkOption {
         type = types.attrsOf types.path;
         default = { };
         description = ''
@@ -338,4 +322,5 @@ in {
         }
       ])
       lib.configurationTypes);
-}
+in
+  toplevelOptions

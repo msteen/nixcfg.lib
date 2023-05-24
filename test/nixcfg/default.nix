@@ -334,6 +334,16 @@
         fails (example.configurations.container ? hello);
       expected = true;
     };
+
+    testApply = {
+      expr = let
+        example = exampleWith {
+          apply.nixosConfigurations = name: { modules = [ { config.lib.apply = true; } ]; };
+        };
+      in
+        example.configurations.nixos.ubuntu.config.lib ? apply;
+      expected = true;
+    };
   };
 in
   lib.runTests tests
