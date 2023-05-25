@@ -107,4 +107,4 @@
     };
   };
 in
-  lib.runTests tests
+  lib.evalTests tests
