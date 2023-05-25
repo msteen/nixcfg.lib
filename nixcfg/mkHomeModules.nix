@@ -20,9 +20,6 @@ mkDefaultModules "home" name
 ++ modules
 ++ lib.singleton {
   nixpkgs.overlays = [ (final: prev: channels) ] ++ defaultOverlays;
-  home = {
-    inherit homeDirectory stateVersion username;
-    packages = [ pkgs.alejandra ];
-  };
+  home = { inherit homeDirectory stateVersion username; };
   programs.home-manager.enable = true;
 }

@@ -14,32 +14,29 @@
     alejandra.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = {
-    self,
-    nixpkgs,
-    alejandra,
-    ...
-  }: let
-    sources = lib.inputsToSources { inherit nixpkgs; };
+  outputs = inputs: let
+    nixcfgLib =
+      (import ./lib { nixpkgs = inputs.nixpkgs.outPath; })
+      .extend (_: _: import ./nixcfg { inherit inputs lib nixcfg sources; });
 
-    baseNixcfgLib = import ./lib { nixpkgs = nixpkgs.outPath; };
-    nixcfgLib = baseNixcfgLib.extend (_: _:
-      import ./nixcfg {
-        inherit lib nixcfg sources;
-        alejandraOverlay = alejandra.overlay;
-      });
-    # FIXME: Note on how it needs to be in this order for evalModules to pass it along correctly.
-    lib = (nixcfgLib.mkNixpkgsLib nixpkgs.outPath).extend (_: _: nixcfgLib);
+    # To prevent unexpected behavior due to accidentally overwriting anything already in nixpkgs,
+    # the nixcfg lib extensions should be updated by the original nixpkgs lib instead of the other way around.
+    # Unfortunately the only correct way to update the original nixpkgs lib is to add an overlay.
+    # Doing it any other way would not update the final lib, which is especially important for e.g. `evalModules`.
+    # As it will pass the final lib to its modules as well, lacking the extensions if no overlay was used.
+    lib = nixcfgLib.extendNew nixcfgLib.lib nixcfgLib;
 
     nixcfg = {
       lib = nixcfgLib;
-      inherit (self) outPath;
+      inherit (inputs.self) outPath;
     };
+
+    sources = lib.inputsToSources inputs;
   in {
     inherit lib;
 
     packages = lib.genAttrs [ "x86_64-linux" ] (system: let
-      pkgs = nixpkgs.legacyPackages.${system};
+      pkgs = inputs.nixpkgs.legacyPackages.${system};
     in {
       htmlDocs = import ./docs { inherit lib nixcfg pkgs; };
     });
@@ -49,7 +46,7 @@
         inherit lib;
       }
       ++ import ./test/nixcfg {
-        inherit lib nixcfg;
+        inherit lib;
         inherit (sources) nixpkgs;
       };
   };

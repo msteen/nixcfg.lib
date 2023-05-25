@@ -197,6 +197,10 @@
           overlays = mkOption {
             type = types.listOf overlay;
             default = [ ];
+            apply = overlays:
+              if lib.any (overlay: lib.attrNames (lib.functionArgs overlay) != [ "lib" "self" ]) overlays
+              then throw "Some of the lib overlays do not contain functions in the form of `{ self, lib }: { ... }`."
+              else overlays;
             description = ''
               The list of lib overlays that should be used for this lib.
             '';
@@ -322,5 +326,45 @@
         }
       ])
       lib.configurationTypes);
-in
-  toplevelOptions
+
+  mkOptionWithoutApply = config: lib.mkOption (removeAttrs config [ "apply" ]);
+
+  topleveNamedModuleOptions = config:
+    lib.filterMapAttrs (_: option: option.type.name == "functionTo")
+    (_: option: option // { default = lib.const { }; })
+    (toplevelOptions {
+      mkOption = mkOptionWithoutApply;
+      # TODO: See if we can still type valid values.
+      # This could potentially be done by wrapping everything in `nullOr`,
+      # setting `null` to be the default, and filtering `null` and `{ }` recursively.
+      # Another potential way is using `options.<name>.isDefined` and `removeAttrs` on `config`,
+      # such that the values are never evaluated.
+      namedSubmodule = options: types.functionTo types.attrs;
+      inherit config;
+    });
+in {
+  firstPassModule = { config, ... }: {
+    _file = ./mkModule.nix;
+    options =
+      toplevelOptions {
+        mkOption = mkOptionWithoutApply;
+        inherit config;
+      }
+      // {
+        apply = lib.mkOption {
+          type = lib.optionsToSubmodule (topleveNamedModuleOptions config);
+          default = { };
+          description = ''
+            Apply a function over the result of merging the explicit and listed config.
+            This allows you to map a function over the merged config rather than just the explicit config.
+            Allowing you to e.g. add a module to every nixos configuration.
+          '';
+        };
+      };
+  };
+
+  secondPassModule = { config, ... }: {
+    _file = ./mkModule.nix;
+    options = toplevelOptions { inherit config; };
+  };
+}

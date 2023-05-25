@@ -72,7 +72,5 @@ in [
   nixpkgs.pkgs = lib.mkDefault pkgs;
   nixpkgs.overlays = [ (final: prev: channels) ] ++ defaultOverlays;
 
-  environment.systemPackages = [ pkgs.alejandra ];
-
   system.stateVersion = stateVersion;
 })

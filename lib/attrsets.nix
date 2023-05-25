@@ -8,7 +8,7 @@
   mapGetAttrPath = lib.flip (lib.foldl' (list: name: map (lib.getAttr name) list));
 
   concatAttrs = lib.foldl' (a: b: a // b) { };
-  concatAttrsRecursive = lib.foldl' (a: b: lib.recursiveUpdate a b) { };
+  concatAttrsRecursive = lib.foldl' lib.recursiveUpdate { };
 
   concatMapAttrs' = f: attrs: lib.listToAttrs (lib.concatMap (name: f name attrs.${name}) (lib.attrNames attrs));
   concatMapAttrs = f: self.concatMapAttrs' (name: value: lib.nameValuePair name (f name value));
@@ -31,6 +31,8 @@
       );
   in
     recur levels [ rhs lhs ];
+
+  concatLevels = levels: lib.foldl' (self.updateLevels levels) { };
 
   optionalAttr = name: attrs:
     lib.optional (attrs ? ${name}) attrs.${name};

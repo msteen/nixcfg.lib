@@ -1,3 +1,6 @@
-final: prev: {
+{
+  self,
+  lib,
+}: {
   overlay = true;
 }

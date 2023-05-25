@@ -2,10 +2,12 @@
   lib,
   nixcfg,
   sources,
-  alejandraOverlay,
+  inputs,
 }: {
-  mkNixcfg = import ./mkNixcfg.nix { inherit alejandraOverlay lib nixcfg sources; };
-  mkNixcfgFlake = import ./mkNixcfgFlake.nix { inherit lib; };
+  mkNixcfg = import ./mkNixcfg.nix { inherit lib nixcfg sources; };
+  mkNixcfgFlake = import ./mkNixcfgFlake.nix { inherit inputs lib; };
+
+  nixcfgPrefix = "nixcfg-";
 
   configurationTypes = [ "nixos" "container" "home" ];
 }

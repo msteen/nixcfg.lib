@@ -1,6 +1,5 @@
 {
   lib,
-  nixcfg,
   nixpkgs,
 }: let
   foo = lib.mkNixcfg {
@@ -153,7 +152,12 @@
         example = exampleWith {
           lib = {
             channelName = "nixos-unstable";
-            overlays = [ (final: prev: { test = prev.lib.source or null == sources.nixos-unstable; }) ];
+            overlays = [
+              ({
+                self,
+                lib,
+              }: { test = lib.source or null == sources.nixos-unstable; })
+            ];
           };
         };
       in

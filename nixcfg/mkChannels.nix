@@ -1,7 +1,4 @@
-{
-  lib,
-  defaultOverlays,
-}: let
+{ lib }: let
   importChannel = nixcfgsOverlays: {
     source,
     system,
@@ -13,12 +10,9 @@
       inherit source system;
       config = { allowUnfree = true; } // config;
       overlays =
-        defaultOverlays
-        ++ (
-          if lib.isFunction overlays
-          then overlays nixcfgsOverlays
-          else overlays
-        );
+        if lib.isFunction overlays
+        then overlays nixcfgsOverlays
+        else overlays;
     };
 
   importNixpkgs = {
@@ -63,7 +57,7 @@ in
         // lib.mapAttrs (
           name: channel: let
             source =
-              if channel.source or null == null
+              if channel.source == null
               then
                 sources.${name}
                 or (throw "Channel '${name}' is missing the required source attribute or does not have it implicit through sources.")
