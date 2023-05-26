@@ -2,6 +2,8 @@
   lib,
   inputs,
 }: config: let
+  constants = import ./constants.nix;
+
   nixcfg = lib.mkNixcfg [
     {
       path = config.inputs.self.outPath;
@@ -17,7 +19,7 @@
       nixcfgs = let
         recurFlake = flake: recur flake.inputs flake.nixcfg.config.nixcfgs ++ [ flake.nixcfg ];
         recur = inputs: nixcfgs: (lib.concatMap (x: let
-          name = lib.nixcfgPrefix + x;
+          name = constants.nixcfgPrefix + x;
         in
           if x ? nixcfg
           then recurFlake x
@@ -95,6 +97,6 @@
       legacyPackages = lib.mapAttrs (_: x: x.nixpkgs) nixcfg.channels;
     }
     // lib.mapAttrs' (type: lib.nameValuePair "${type}Configurations") nixcfg.configurations
-    // lib.getAttrs (lib.concatMap (type: [ "${type}Modules" "${type}Profiles" ]) lib.configurationTypes) config;
+    // lib.getAttrs (lib.concatMap (type: [ "${type}Modules" "${type}Profiles" ]) constants.configurationTypes) config;
 in
   self

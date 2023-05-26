@@ -3,6 +3,8 @@
   nixcfg,
   sources,
 }: let
+  constants = import ./constants.nix;
+
   inherit (sources) nixpkgs;
 
   requiredSources = {
@@ -99,7 +101,7 @@
 
     nixcfgsChannels = mkChannels' nixcfgsNixpkgsSources config.systems;
 
-    configurationsArgs = lib.genAttrs lib.configurationTypes (
+    configurationsArgs = lib.genAttrs constants.configurationTypes (
       type:
         lib.mapAttrs (name: {
             system,

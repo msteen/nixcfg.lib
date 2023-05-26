@@ -1,4 +1,6 @@
 { lib }: let
+  constants = import ./constants.nix;
+
   inherit (lib) types;
 
   # There is no overlay type in the nixpkgs lib, so we have to define one ourselves.
@@ -325,7 +327,7 @@
           name = "${type}Profiles";
         }
       ])
-      lib.configurationTypes);
+      constants.configurationTypes);
 
   mkOptionWithoutApply = config: lib.mkOption (removeAttrs config [ "apply" ]);
 

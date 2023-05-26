@@ -1,4 +1,6 @@
 { lib }: sources: nixcfgs: self: let
+  constants = import ./constants.nix;
+
   allNixcfgs = let
     recurNixcfg = nixcfg: recur nixcfg.config.sources nixcfg.config.nixcfgs ++ [ nixcfg ];
 
@@ -6,8 +8,8 @@
     # so we have to do additional filtering where necessary.
     recur = sources: nixcfgs: let
       nixcfgSources =
-        lib.filterMapAttrs' (name: _: lib.hasPrefix lib.nixcfgPrefix name)
-        (name: value: lib.nameValuePair (lib.removePrefix lib.nixcfgPrefix name) value)
+        lib.filterMapAttrs' (name: _: lib.hasPrefix constants.nixcfgPrefix name)
+        (name: value: lib.nameValuePair (lib.removePrefix constants.nixcfgPrefix name) value)
         sources;
       missingNixcfgs = lib.attrNames (removeAttrs nixcfgSources (map (x:
         if lib.isAttrs x
@@ -21,7 +23,7 @@
       if lib.length missingNixcfgs > 0
       then throw "The nixcfgs ${lib.concatNames missingNixcfgs} are listed as sources, but not configured in the nixcfgs list."
       else if lib.length missingNixcfgSources > 0
-      then throw "The nixcfgs ${lib.concatNames missingNixcfgSources} miss corresponding sources prefixed with '${lib.nixcfgPrefix}'."
+      then throw "The nixcfgs ${lib.concatNames missingNixcfgSources} miss corresponding sources prefixed with '${constants.nixcfgPrefix}'."
       else
         lib.concatMap (x:
           if lib.isAttrs x

@@ -1,4 +1,6 @@
 { lib }: modules: let
+  constants = import ./constants.nix;
+
   configPath = let
     paths = lib.filter (x: x != null) (map (x: x.path or x.config.path or null) modules);
   in
@@ -19,7 +21,7 @@
       data = "data";
       ".sops.yaml" = "sopsConfig";
     }
-    // lib.genAttrs lib.configurationTypes (type: {
+    // lib.genAttrs constants.configurationTypes (type: {
       configs = "${type}Configurations";
       modules = "${type}Modules";
       profiles = "${type}Profiles";
@@ -87,7 +89,7 @@
 
       sopsConfig = listedArgs.sopsConfig or null;
     }
-    // lib.getAttrs (lib.concatMap (type: [ "${type}Modules" "${type}Profiles" ]) lib.configurationTypes) listedArgs;
+    // lib.getAttrs (lib.concatMap (type: [ "${type}Modules" "${type}Profiles" ]) constants.configurationTypes) listedArgs;
 
   inherit (import ./mkModule.nix { inherit lib; }) firstPassModule secondPassModule;
 
