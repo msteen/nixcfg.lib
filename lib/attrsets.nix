@@ -4,8 +4,8 @@
 }: {
   getAttrPath = lib.flip (lib.foldl' (lib.flip lib.getAttr));
   catAttrsPath = lib.flip (lib.foldl' (lib.flip lib.catAttrs));
-
   mapGetAttrPath = lib.flip (lib.foldl' (list: name: map (lib.getAttr name) list));
+  mapAttrsPath = path: attrs: lib.mapAttrs (_: self.getAttrPath path) attrs;
 
   concatAttrs = lib.foldl' (a: b: a // b) { };
   concatAttrsRecursive = lib.foldl' lib.recursiveUpdate { };

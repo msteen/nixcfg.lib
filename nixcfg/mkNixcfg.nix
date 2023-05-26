@@ -66,6 +66,12 @@
       nixpkgs = latestSources.nixos or latestSources.release or nixpkgs;
     };
 
+  libOverlayToOverlay = libOverlay: (final: prev:
+    libOverlay {
+      self = final;
+      inherit (prev) lib;
+    });
+
   mkNixcfg = self: x: let
     config = mkConfig (lib.toList x);
 
@@ -73,6 +79,17 @@
 
     nixcfgsSources = lib.concatAttrs (lib.mapGetAttrPath [ "config" "sources" ] nixcfgs);
     nixcfgsNixpkgsSources = sourcesWithDefaultNixpkgs (filterNixpkgsSources nixcfgsSources);
+
+    nixcfgsOverlays = lib.mapAttrsPath [ "config" "overlays" ] nixcfgsAttrs;
+
+    mkChannels' = mkChannels {
+      # The channel overlays option allows you to pass a function
+      # expecting the attrset containing all available overlays.
+      inherit nixcfgsOverlays;
+      inherit (config) channels;
+    };
+
+    nixcfgsChannels = mkChannels' nixcfgsNixpkgsSources config.systems;
 
     libNixpkgs = let
       inherit (config.lib) channelName;
@@ -85,21 +102,13 @@
     libOverlays = lib.singleton (_: { lib = nixpkgsLib; }) ++ config.lib.overlays;
 
     nixpkgsLib = lib.mkNixpkgsLib libNixpkgs;
-    nixcfgsLib = lib.extendsList (map (libOverlay: (final: prev:
-      libOverlay {
-        self = final;
-        inherit (prev) lib;
-      })) (lib.concatLists (lib.catAttrs "libOverlays" nixcfgs))) (final: nixcfg.lib);
-    outputLib = lib.extendNew nixpkgsLib nixcfgsLib;
+    nixcfgsLib = lib.extendNew nixpkgsLib (
+      lib.extendsList (map libOverlayToOverlay (lib.concatLists (lib.catAttrs "libOverlays" nixcfgs))) (final: nixcfg.lib)
+    );
 
-    mkChannels' = mkChannels {
-      # The channel overlays option allows you to pass a function
-      # expecting the attrset containing all available overlays.
-      nixcfgsOverlays = lib.mapAttrs (_: lib.getAttrPath [ "config" "overlays" ]) nixcfgsAttrs;
-      inherit (config) channels;
-    };
-
-    nixcfgsChannels = mkChannels' nixcfgsNixpkgsSources config.systems;
+    nixcfgsProfiles =
+      lib.genAttrs constants.configurationTypes (type:
+        lib.mapAttrsPath [ "config" "${type}Profiles" ] nixcfgsAttrs);
 
     configurationsArgs = lib.genAttrs constants.configurationTypes (
       type:
@@ -151,13 +160,13 @@
         # By default the lib containing `evalModules` is used,
         # but we do not always have control over which lib is used for this,
         # so we pass it explicitly as a special argument, which overwrites the default.
-        lib = outputLib;
+        lib = nixcfgsLib;
 
         # In case only nixcfg's extensions to lib are needed.
         nixcfg.lib = nixcfgsLib;
 
-        data = lib.mapAttrs (_: lib.getAttrPath [ "config" "data" ]) nixcfgsAttrs;
-        profiles = lib.mapAttrs (_: lib.getAttrPath [ "config" "${type}Profiles" ]) nixcfgsAttrs;
+        data = lib.mapAttrsPath [ "config" "data" ] nixcfgsAttrs;
+        profiles = nixcfgsProfiles.${type};
       }
       // moduleArgs;
 
@@ -199,7 +208,7 @@
         # The rest is handled in `mkNixosModules`.
         (args: (import (args.pkgs.path + "/nixos/lib/eval-config.nix") {
           inherit (args) system;
-          lib = outputLib;
+          lib = nixcfgsLib;
           specialArgs = mkSpecialArgs "nixos" args;
           modules = mkNixosModules args;
         }));
@@ -331,13 +340,25 @@
 
     packages = lib.mapAttrs (type: lib.mapAttrs (_: configurationToPackage.${type})) configurations;
   in {
-    inherit configurations libOverlays nixcfgs packages;
-    channels = nixcfgsChannels;
+    inherit configurations libOverlays packages;
 
     config = config // { inherit nixcfgs; };
 
-    # To make nixcfg's extensions to lib also available outside configurations.
-    lib = outputLib;
+    nixcfgs = let
+      concatConfigurationTypes = name: lib.concatLevels 1 (map (lib.getAttr name) nixcfgs);
+    in {
+      lib = nixcfgsLib;
+      sources = nixcfgsSources;
+      channels = nixcfgsChannels;
+      inherit defaultOverlays;
+      overlays = nixcfgsOverlays;
+      configurations = concatConfigurationTypes "configurations";
+      packages = concatConfigurationTypes "packages";
+      modules =
+        lib.genAttrs constants.configurationTypes (type:
+          lib.concatAttrs (lib.mapGetAttrPath [ "config" "${type}Modules" ] nixcfgs));
+      profiles = nixcfgsProfiles;
+    };
 
     # Makes it possible to convert this attrset to a string.
     outPath = config.path;

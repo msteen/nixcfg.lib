@@ -6,7 +6,7 @@
     builtins.readFileType
     or (path:
       (builtins.readDir (dirOf path)).${baseNameOf path}
-      or throw "getting status of '${toString path}': No such file or directory");
+      or (throw "getting status of '${toString path}': No such file or directory"));
 
   listNix = dir: let
     f = name: type: let

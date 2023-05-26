@@ -35,7 +35,7 @@
               else if lib.isString x
               then
                 nixcfgSources.${x}
-                or throw "The nixcfg '${x}' has no known source."
+                or (throw "The nixcfg '${x}' has no known source.")
               else throw "One of the listed nixcfgs is neither a nixcfg attrset, a string reference to a known source, nor a path."
             )))
         nixcfgs;

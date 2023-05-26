@@ -84,19 +84,19 @@
             inherit system value;
             name = "${type}_${name}";
           }))
-        nixcfg.packages;
+        nixcfgs.packages;
       in
         lib.mapAttrs (_: lib.listToAttrs) (lib.groupBy (x: x.system) list);
 
-      inherit (config) overlays;
+      inherit (nixcfgs) overlays;
 
       formatter =
         lib.genAttrs config.systems (system:
           self.legacyPackages.${system}.alejandra);
 
-      legacyPackages = lib.mapAttrs (_: x: x.nixpkgs) nixcfg.channels;
+      legacyPackages = lib.mapAttrs (_: x: x.nixpkgs) nixcfgs.channels;
     }
-    // lib.mapAttrs' (type: lib.nameValuePair "${type}Configurations") nixcfg.configurations
-    // lib.getAttrs (lib.concatMap (type: [ "${type}Modules" "${type}Profiles" ]) constants.configurationTypes) config;
+    // lib.mapAttrs' (type: lib.nameValuePair "${type}Configurations") nixcfgs.configurations
+    // lib.mapToAttrs (type: lib.nameValuePair "${type}Modules" nixcfgs.modules.${type}) constants.configurationTypes;
 in
   self

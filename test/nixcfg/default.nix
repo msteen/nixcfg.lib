@@ -58,7 +58,7 @@
     };
 
     testBazNixcfgsOrder = {
-      expr = lib.mapGetAttrPath [ "config" "name" ] baz.nixcfgs;
+      expr = lib.mapGetAttrPath [ "config" "name" ] baz.config.nixcfgs;
       expected = [ "foo" "bar" "baz" ];
     };
 
@@ -124,7 +124,7 @@
     };
 
     testNixcfgsLib_1 = {
-      expr = example.lib ? overlay;
+      expr = example.nixcfgs.lib ? overlay;
       expected = true;
     };
 
@@ -133,7 +133,7 @@
         example = exampleWith {
           lib.channelName = "foo";
         };
-        inherit (example) lib;
+        inherit (example.nixcfgs) lib;
       in
         fails (lib.lib ? source);
       expected = true;
@@ -141,7 +141,7 @@
 
     testNixcfgsLib_3 = {
       expr = let
-        inherit (example) lib;
+        inherit (example.nixcfgs) lib;
       in
         (lib.lib.source or null) == sources.nixpkgs && lib ? mkNixcfg;
       expected = true;
@@ -161,7 +161,7 @@
           };
         };
       in
-        example.lib.test;
+        example.nixcfgs.lib.test;
       expected = true;
     };
 
