@@ -39,10 +39,10 @@
   mkNixcfgs = import ./mkNixcfgs.nix { inherit lib; };
   mkChannels = import ./mkChannels.nix { inherit lib; };
 
-  # This filters out the sources for nixpkgs and all official nixpkgs channel branches.
   filterNixpkgsSources = lib.filterAttrs (
     name: _:
-      lib.elem name [ "nixpkgs" "nixpkgs-unstable" ]
+      (name == "nixpkgs")
+      || lib.hasPrefix "nixpkgs-" name
       || lib.hasPrefix "nixos-" name
       || lib.hasPrefix "release-" name
   );
