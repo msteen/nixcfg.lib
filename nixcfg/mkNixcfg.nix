@@ -350,7 +350,6 @@
       lib = nixcfgsLib;
       sources = nixcfgsSources;
       channels = nixcfgsChannels;
-      inherit defaultOverlays;
       overlays = nixcfgsOverlays;
       configurations = concatConfigurationTypes "configurations";
       packages = concatConfigurationTypes "packages";

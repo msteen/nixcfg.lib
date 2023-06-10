@@ -2,9 +2,11 @@
   description = "Nix configuration";
 
   inputs = {
-    nixpkgs.follows = "nixos-22_11";
-    nixos-22_11.url = "github:NixOS/nixpkgs/fd901ef4bf93499374c5af385b2943f5801c0833";
-    nixos-unstable.url = "github:NixOS/nixpkgs/19cf008bb18e47b6e3b4e16e32a9a4bdd4b45f7e";
+    nixos-22_11.url = "github:NixOS/nixpkgs/nixos-22.11";
+    nixos-23_05.url = "github:NixOS/nixpkgs/nixos-23.05";
+    nixos-unstable.url = "github:NixOS/nixpkgs/nixos-unstable";
+    nixos-stable.follows = "nixos-23_05";
+    nixpkgs.follows = "nixos-stable";
 
     extra-container = {
       url = "github:erikarvstedt/extra-container";
@@ -12,9 +14,8 @@
     };
 
     home-manager = {
-      url = "github:nix-community/home-manager/release-22.11";
-      inputs.nixpkgs.follows = "nixpkgs";
-      inputs.utils.follows = "extra-container/flake-utils";
+      url = "github:nix-community/home-manager/release-23.05";
+      inputs.nixpkgs.follows = "nixos-23_05";
     };
   };
 

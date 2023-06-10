@@ -75,7 +75,7 @@
           sources = { };
           moduleArgs = { };
           modules = [ ./nixcfg/nixos/configs/hello.nix ];
-          stateVersion = "22.11";
+          stateVersion = "23.05";
           system = "x86_64-linux";
         };
         ubuntu = {
@@ -83,7 +83,7 @@
           sources = { };
           moduleArgs = { };
           modules = [ ./nixcfg/nixos/configs/ubuntu ];
-          stateVersion = "22.11";
+          stateVersion = "23.05";
           system = "x86_64-linux";
         };
       };
@@ -101,7 +101,7 @@
           channelName = "nixpkgs";
           sources = { inherit (sources) home-manager; };
           moduleArgs = { };
-          stateVersion = "22.11";
+          stateVersion = "23.05";
           system = "x86_64-linux";
           users.matthijs = {
             homeDirectory = "/home/matthijs";
@@ -215,7 +215,7 @@
           sources = { };
           moduleArgs = { };
           modules = [ ./nixcfg/container/configs/hello.nix ];
-          stateVersion = "22.11";
+          stateVersion = "23.05";
           system = "x86_64-linux";
         };
       };
@@ -249,7 +249,7 @@
         };
         pkgsPath = toString example.configurations.home.ubuntu_matthijs.pkgs.path;
       in {
-        isStableNixpkgs = pkgsPath == sources.nixos-22_11;
+        isStableNixpkgs = pkgsPath == sources.nixos-23_05;
         isNixcfgNixpkgs = pkgsPath == nixpkgs;
       };
       expected = {
@@ -261,7 +261,7 @@
     testDefaultNixpkgs_3 = {
       expr = let
         example = exampleWith {
-          sources = removeAttrs sources [ "nixpkgs" "nixos-22_11" "nixos-unstable" ];
+          sources = removeAttrs sources [ "nixpkgs" "nixos-22_11" "nixos-23_05" "nixos-stable" "nixos-unstable" ];
         };
         pkgsPath = toString example.configurations.home.ubuntu_matthijs.pkgs.path;
       in
@@ -332,7 +332,7 @@
     testContainerNixpkgs = {
       expr = let
         example = exampleWith {
-          sources = removeAttrs sources [ "nixos-unstable" ];
+          sources.nixpkgs = sources.nixos-22_11;
         };
       in
         fails (example.configurations.container ? hello);

@@ -11,7 +11,7 @@
   concatAttrsRecursive = lib.foldl' lib.recursiveUpdate { };
 
   concatMapAttrs' = f: attrs: lib.listToAttrs (lib.concatMap (name: f name attrs.${name}) (lib.attrNames attrs));
-  concatMapAttrs = f: self.concatMapAttrs' (name: value: lib.nameValuePair name (f name value));
+  concatMapAttrs = f: self.concatMapAttrs' (name: value: map (lib.nameValuePair name) (f name value));
 
   mapToAttrs = f: list: lib.listToAttrs (map f list);
   concatMapToAttrs = f: list: lib.listToAttrs (lib.concatMap f list);
@@ -44,6 +44,30 @@
         value = attrs.${name};
       })
     names);
+
+  matchAttrsPattern = pattern: attrs:
+    lib.all lib.id (lib.mapAttrsToList (name: pat: let
+      val = attrs.${name};
+    in
+      if !attrs ? ${name}
+      then false
+      else if lib.isAttrs pat
+      then lib.isAttrs val && self.matchAttrsPattern pat val
+      else pat == null || pat == val)
+    pattern);
+
+  getAttrsPattern = pattern: attrs:
+    self.concatMapAttrs (name: pat: let
+      val = attrs.${name};
+    in
+      if !attrs ? ${name}
+      then [ ]
+      else if lib.isAttrs pat
+      then lib.optional (lib.isAttrs val) (self.getAttrsPattern pat val)
+      else if pat == null
+      then [ val ]
+      else lib.optional (pat == val) val)
+    pattern;
 
   flattenAttrs = sep: let
     recur = acc: path: attrs:

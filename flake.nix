@@ -3,7 +3,7 @@
 
   inputs = {
     # We use the latest stable release because it also acts as the fallback nixpkgs.
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-22.11";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-23.05";
 
     flake-compat = {
       url = "github:edolstra/flake-compat";
@@ -49,5 +49,10 @@
         inherit lib;
         inherit (sources) nixpkgs;
       };
+
+    tests2 = import ./tests/nixcfg {
+      inherit lib;
+      inherit (sources) nixpkgs;
+    };
   };
 }
