@@ -96,7 +96,7 @@
   firstPassConfig = lib.evalModulesToConfig ([
       firstPassModule
       {
-        _file = ./mkConfig.nix;
+        _file = __curPos.file;
         config = listedConfig;
       }
     ]

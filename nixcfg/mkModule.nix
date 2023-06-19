@@ -346,7 +346,7 @@
     });
 in {
   firstPassModule = { config, ... }: {
-    _file = ./mkModule.nix;
+    _file = __curPos.file;
     options =
       toplevelOptions {
         mkOption = mkOptionWithoutApply;
@@ -366,7 +366,7 @@ in {
   };
 
   secondPassModule = { config, ... }: {
-    _file = ./mkModule.nix;
+    _file = __curPos.file;
     options = toplevelOptions { inherit config; };
   };
 }

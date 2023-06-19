@@ -328,7 +328,7 @@
 
                 inherit pkgs;
                 configuration = {
-                  _file = ./.;
+                  _file = __curPos.file;
                   imports =
                     mkHomeModules args username user
                     ++ [ { programs.home-manager.path = sources.home-manager; } ];
