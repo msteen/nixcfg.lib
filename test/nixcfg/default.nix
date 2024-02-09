@@ -75,7 +75,7 @@
           sources = { };
           moduleArgs = { };
           modules = [ ./nixcfg/nixos/configs/hello.nix ];
-          stateVersion = "23.05";
+          stateVersion = "23.11";
           system = "x86_64-linux";
         };
         ubuntu = {
@@ -83,7 +83,7 @@
           sources = { };
           moduleArgs = { };
           modules = [ ./nixcfg/nixos/configs/ubuntu ];
-          stateVersion = "23.05";
+          stateVersion = "23.11";
           system = "x86_64-linux";
         };
       };
@@ -101,7 +101,7 @@
           channelName = "nixpkgs";
           sources = { inherit (sources) home-manager; };
           moduleArgs = { };
-          stateVersion = "23.05";
+          stateVersion = "23.11";
           system = "x86_64-linux";
           users.matthijs = {
             homeDirectory = "/home/matthijs";
@@ -215,7 +215,7 @@
           sources = { };
           moduleArgs = { };
           modules = [ ./nixcfg/container/configs/hello.nix ];
-          stateVersion = "23.05";
+          stateVersion = "23.11";
           system = "x86_64-linux";
         };
       };
@@ -249,7 +249,7 @@
         };
         pkgsPath = toString example.configurations.home.ubuntu_matthijs.pkgs.path;
       in {
-        isStableNixpkgs = pkgsPath == sources.nixos-23_05;
+        isStableNixpkgs = pkgsPath == sources.nixos-23_11;
         isNixcfgNixpkgs = pkgsPath == nixpkgs;
       };
       expected = {
@@ -261,7 +261,7 @@
     testDefaultNixpkgs_3 = {
       expr = let
         example = exampleWith {
-          sources = removeAttrs sources [ "nixpkgs" "nixos-22_11" "nixos-23_05" "nixos-stable" "nixos-unstable" ];
+          sources = removeAttrs sources [ "nixpkgs" "nixos-22_11" "nixos-23_11" "nixos-stable" "nixos-unstable" ];
         };
         pkgsPath = toString example.configurations.home.ubuntu_matthijs.pkgs.path;
       in

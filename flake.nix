@@ -3,7 +3,7 @@
 
   inputs = {
     # We use the latest stable release because it also acts as the fallback nixpkgs.
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-23.05";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-23.11";
 
     flake-compat = {
       url = "github:edolstra/flake-compat";

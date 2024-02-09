@@ -49,7 +49,7 @@
 
     stateVersion = mkOption {
       type = types.str;
-      default = "23.05";
+      default = "23.11";
       description = ''
         The state version of this ${type} configuration.
 
