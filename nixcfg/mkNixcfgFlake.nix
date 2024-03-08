@@ -4,6 +4,8 @@
 }: config: let
   constants = import ./constants.nix;
 
+  alejandra = inputs.alejandra.defaultPackage."x86_64-linux";
+
   nixcfg = lib.mkNixcfg [
     {
       path = config.inputs.self.outPath;
@@ -45,7 +47,7 @@
             pkgs,
             ...
           }: {
-            environment.systemPackages = [ pkgs.alejandra ];
+            environment.systemPackages = [ alejandra ];
 
             nix.registry = lib.mapAttrs (_: input: { flake = input; }) inputs;
 
