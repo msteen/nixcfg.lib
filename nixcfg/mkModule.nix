@@ -310,7 +310,7 @@
       name,
     }:
       lib.nameValuePair name (mkOption {
-        type = types.attrsOf types.path;
+        type = types.attrs;
         default = { };
         description = ''
           The set of ${type} ${kind} made available in ${type} configurations.
